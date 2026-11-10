@@ -115,9 +115,9 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
                             "memory" -> MemoryMatch(voice, fx, { reward(30, 8, 2) { it.copy(games = it.games + 1) } }) { go("home") }
                             "sentence" -> SentenceBuilder(voice, fx, { reward(30, 8, 2) { it.copy(games = it.games + 1) }; go("home") }) { go("home") }
                             "alphabet" -> AlphabetWorld(voice) { go("home") }
-                            "words3" -> WordBuilder(me?.name ?: "", words3, voice, { reward(8, 1, 1) }) { go("home") }
-                            "words4" -> WordBuilder(me?.name ?: "", words4, voice, { reward(8, 1, 1) }) { go("home") }
-                            "hear" -> WordBuilder(me?.name ?: "", words3.take(3) + words4.take(3), voice, { reward(8, 1, 1) }, hear = true) { go("home") }
+                            "words3" -> WordBuilder(me?.name ?: "", words3, voice, { reward(8, 1, 1) }, back = { go("home") })
+                            "words4" -> WordBuilder(me?.name ?: "", words4, voice, { reward(8, 1, 1) }, back = { go("home") })
+                            "hear" -> WordBuilder(me?.name ?: "", words3.take(3) + words4.take(3), voice, { reward(8, 1, 1) }, back = { go("home") }, hear = true)
                             "stories" -> Stories(me?.name ?: "", voice, { reward(8, 1, 1) }) { go("home") }
                             "trace" -> Trace(voice, { reward(8, 1, 1) }) { go("home") }
                             "basket" -> Basket(me?.name ?: "", voice, { reward(8, 1, 1) }) { go("home") }
