@@ -1,5 +1,10 @@
 package com.margaretm.app
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -75,16 +81,20 @@ import androidx.compose.ui.unit.sp
 
 // ---------- Home ----------
 data class Tl(val e: String, val t: String, val s: String, val route: String)
-@Composable fun HomeScreen(k: Profile, goal: Int, v: Voice, go: (String) -> Unit) {
+@Composable fun HomeScreen(k: Profile, goal: Int, v: Voice, openChest: () -> Int, go: (String) -> Unit) {
     LaunchedEffect(Unit) { v.say("Hi ${k.name}! What shall we play?") }
     val today = dayKey(System.currentTimeMillis()); val dailyDone = k.dailyDay == today
     val doneToday = k.today(); val weak = weakWords(k.mastery, 6).size
     val next = adventure.firstOrNull { (k.levels[it.n] ?: 0) == 0 }
+    val wod = bank[(dailySeed(today) % bank.size).toInt()]
+    var chestMsg by remember { mutableStateOf("") }
+    val chestReady = k.chestDay != today
     val practice = Kind.values().map { Tl(it.emoji, it.title, "", "practice:${it.name}") }
     val games = listOf(Tl("🧠", "Memory Match", "flip & find", "memory"), Tl("✏️", "Sentences", "build it", "sentence"), Tl("⚡", "Lightning", "45 seconds", "lightning"),
-        Tl("🔁", "Review", if (weak > 0) "$weak words to polish" else "smart practice", "review"), Tl("🏁", "Word Race", "30 seconds", "race"), Tl("🔤", "Alphabet World", "A to Z", "alphabet"),
+        Tl("🔁", "Review", if (weak > 0) "$weak words to polish" else "smart practice", "review"), Tl("🏁", "Word Race", "30 seconds", "race"), Tl("👂", "Hear & Build", "listen first", "hear"))
+    val creative = listOf(Tl("🎨", "Paint Studio", "draw & stick", "paint"), Tl("📖", "Story Time", "", "stories"), Tl("🔤", "Alphabet World", "A to Z", "alphabet"),
         Tl("✍️", "Trace Letters", "", "trace"), Tl("🧺", "Alphabet Basket", "", "basket"), Tl("🐱", "3-letter words", "", "words3"), Tl("📚", "4-letter words", "", "words4"),
-        Tl("👂", "Hear & Build", "", "hear"), Tl("📖", "Story Time", "", "stories"), Tl("🏆", "Leaderboard", "", "board"), Tl("👪", "Switch player", "", "profiles"))
+        Tl("🏆", "Leaderboard", "", "board"), Tl("👪", "Switch player", "", "profiles"))
     @Composable fun grid(l: List<Tl>, off: Int) = l.chunked(2).forEachIndexed { r, row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
         row.forEachIndexed { c, g -> Tile(g.e, g.t, g.s, cardColors[(r + c + off) % 4], Modifier.weight(1f)) { go(g.route) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } }
     Scroll {
@@ -95,33 +105,52 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
         }
         GCard(Modifier.fillMaxWidth()) { Text("Today's goal: $doneToday / $goal answers", fontWeight = FontWeight.Bold, color = Ink); Spacer(Modifier.height(6.dp)); Bar(doneToday.toFloat() / goal)
             if (doneToday >= goal) Text("🎉 Goal reached! Amazing!", fontSize = 13.sp, color = Ink) }
+        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
+            GCard(Modifier.weight(1f), { if (chestReady) { val c = openChest(); chestMsg = "You found 🪙 $c!"; v.say("You found $c coins!") } }) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (chestReady) Mascot("🎁", 36) else Text("✅", fontSize = 36.sp)
+                    Text(if (chestReady) "Daily gift" else "Gift opened", fontWeight = FontWeight.Bold, color = Ink)
+                    Text(if (chestMsg.isNotEmpty()) chestMsg else if (chestReady) "Tap to open!" else "Back tomorrow", fontSize = 12.sp, color = Ink, textAlign = TextAlign.Center) } }
+            GCard(Modifier.weight(1f), { v.say("Word of the day: ${wod.w.lowercase()}. ${wod.w.toList().joinToString(" ")}. ${wod.w.lowercase()}") }) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(wod.e, fontSize = 36.sp); Text(wod.w, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Ink)
+                    Text("Word of the day 🔊", fontSize = 12.sp, color = Ink, textAlign = TextAlign.Center) } }
+        }
         PBtn(if (dailyDone) "🎯 Daily challenge done ✔ (play again)" else "🎯 Daily Challenge · +bonus", { go("daily") }, cols = listOf(Color(0xFFFFB400), Color(0xFFFF5E8A)))
         if (next != null) PBtn("🗺️ Continue: ${next.world.substringBefore(' ')} – level ${next.n}", { go("level:${next.n}") }, cols = listOf(Color(0xFF22C1A5), Color(0xFF3DB9FF)))
+        Hero3D(k.runBest, { go("runner") }, { go("cube") })
         Section("Practice"); grid(practice, 0)
         Section("Games"); grid(games, 1)
+        Section("Create & explore"); grid(creative, 2)
         Spacer(Modifier.height(8.dp))
     }
 }
 
 // ---------- Adventure map ----------
-@Composable fun MapScreen(k: Profile, play: (Int) -> Unit) = Scroll {
-    val done = k.levels.count { it.value >= 1 }
-    Big("🗺️ Adventure Map", 30); Big("$done / ${adventure.size} levels · ${k.levels.values.sum()} ⭐", 14)
-    worlds.forEachIndexed { w, name ->
-        Section(name)
-        adventure.filter { it.n in (w * 8 + 1)..(w * 8 + 8) }.chunked(4).forEachIndexed { r, row ->
-            val ordered = if (r % 2 == 0) row else row.reversed()
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) { ordered.forEach { lv ->
-                val s = k.levels[lv.n] ?: 0; val open = lv.n == 1 || (k.levels[lv.n - 1] ?: 0) >= 1
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).alpha(if (open) 1f else .5f)) {
-                    Box(Modifier.size(64.dp).shadow(8.dp, CircleShape).background(Brush.linearGradient(if (!open) listOf(Color.Gray, Color.LightGray) else cardColors[w % 4]), CircleShape)
-                        .clickable(enabled = open) { play(lv.n) }, Alignment.Center) { Text(if (open) "${lv.n}" else "🔒", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White) }
-                    Text(if (open) "⭐".repeat(s) + "☆".repeat(3 - s) else "", fontSize = 11.sp)
-                    Text(lv.kind.emoji, fontSize = 14.sp)
-                } } }
+@Composable fun MapScreen(k: Profile, play: (Int) -> Unit) {
+    val pulse by rememberInfiniteTransition(label = "node").animateFloat(1f, 1.16f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "p")
+    val cur = adventure.firstOrNull { (k.levels[it.n] ?: 0) == 0 }?.n
+    Scroll {
+        val done = k.levels.count { it.value >= 1 }
+        Big("🗺️ Adventure Map", 30); Big("$done / ${adventure.size} levels · ${k.levels.values.sum()} ⭐", 14)
+        worlds.forEachIndexed { w, name ->
+            val got = adventure.count { it.n in (w * 8 + 1)..(w * 8 + 8) && (k.levels[it.n] ?: 0) >= 1 }
+            Box(Modifier.fillMaxWidth().background(Brush.horizontalGradient(cardColors[w % 4]), RoundedCornerShape(18.dp)).padding(12.dp)) {
+                Text("$name   $got/8", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+            adventure.filter { it.n in (w * 8 + 1)..(w * 8 + 8) }.chunked(4).forEachIndexed { r, row ->
+                val ordered = if (r % 2 == 0) row else row.reversed()
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) { ordered.forEach { lv ->
+                    val s = k.levels[lv.n] ?: 0; val open = lv.n == 1 || (k.levels[lv.n - 1] ?: 0) >= 1
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).alpha(if (open) 1f else .5f)) {
+                        Box(Modifier.size(64.dp).scale(if (lv.n == cur) pulse else 1f).shadow(8.dp, CircleShape).background(Brush.linearGradient(if (!open) listOf(Color.Gray, Color.LightGray) else cardColors[w % 4]), CircleShape)
+                            .clickable(enabled = open) { play(lv.n) }, Alignment.Center) { Text(if (open) "${lv.n}" else "🔒", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        Text(if (open) "⭐".repeat(s) + "☆".repeat(3 - s) else "", fontSize = 11.sp)
+                        Text(if (lv.n % 8 == 0) "👑" else lv.kind.emoji, fontSize = 14.sp)
+                    } } }
+            }
         }
+        Spacer(Modifier.height(8.dp))
     }
-    Spacer(Modifier.height(8.dp))
 }
 
 // ---------- Badges ----------

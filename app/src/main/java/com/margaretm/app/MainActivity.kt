@@ -51,6 +51,15 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
     }
     fun diff() = ((me?.level ?: 1) / 4).coerceAtMost(3)
 
+    /** Daily gift: coins grow with the play streak, with a big bonus every 7th day. Returns the coins (0 if already opened). */
+    fun chest(): Int {
+        val m = me ?: return 0; val today = dayKey(System.currentTimeMillis())
+        if (m.chestDay == today) return 0
+        val c = 10 + 5 * minOf(m.streak, 10) + if (m.streak > 0 && m.streak % 7 == 0) 50 else 0
+        reward(10, c, 0) { it.copy(chestDay = today) }
+        return c
+    }
+
     fun done(spec: QuizSpec, r: QuizResult) {
         val m = me ?: return; val today = dayKey(System.currentTimeMillis()); val timed = spec.kind == "lightning"
         val stars = if (timed) minOf(3, r.correct / 6) else starsFor(r.correct, r.total)
@@ -90,7 +99,7 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
                             "profiles" -> Profiles(kids, { id -> st.activeId = id; st.checkin(id); tick++; go("home") }, { go("addkid") }, { st.activeId = null; go("login") })
                             "addkid" -> AddKid(st, { n, a -> val k = st.addKid(n, a); st.activeId = k.id; st.checkin(k.id); tick++; go("namegame") }, { go("profiles") })
                             "namegame" -> NameGame(me?.name ?: "Friend", voice) { reward(20, 5, 1); go("home") }
-                            "home" -> me?.let { HomeScreen(it, cfg.goal, voice, ::launch) }
+                            "home" -> me?.let { HomeScreen(it, cfg.goal, voice, ::chest, ::launch) }
                             "map" -> me?.let { k -> MapScreen(k) { n -> launch("level:$n") } }
                             "awards" -> me?.let { AwardsScreen(it) }
                             "shop" -> me?.let { k -> ShopScreen(k, voice,
@@ -114,6 +123,12 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
                             "basket" -> Basket(me?.name ?: "", voice, { reward(8, 1, 1) }) { go("home") }
                             "race" -> Race(voice, { sc -> reward(sc * 3, sc, if (sc >= 8) 3 else if (sc >= 4) 2 else if (sc >= 1) 1 else 0) { it.copy(best = maxOf(it.best, sc), race = maxOf(it.race, sc), games = it.games + 1) } }, { go("home") }, { go("board") })
                             "board" -> Board(kids, me?.id) { go("home") }
+                            "runner" -> me?.let { k -> LetterDash(k, diff(), voice, fx,
+                                { w, ok -> st.record(k.id, Question(Kind.PICTURE_WORD, "", "", emptyList(), 0, "", w), ok) },
+                                { r -> reward(r.xp, r.coinReward, r.stars, r.bestCombo) { p -> p.copy(games = p.games + 1, runBest = maxOf(p.runBest, r.score), runWords = p.runWords + r.words) } },
+                                { go("home") }) }
+                            "cube" -> LetterCube(voice, fx, { reward(8, 1, 1) { it.copy(cube = it.cube + 1) } }) { go("home") }
+                            "paint" -> PaintStudio(voice, { reward(12, 3, 1) { it.copy(art = it.art + 1) } }) { go("home") }
                             else -> {}
                         }
                     }

@@ -105,7 +105,8 @@ fun reviewQuestions(words: List<String>, seed: Long): List<Question> {
 
 // Achievements are rules over a stats snapshot.
 data class Stats(val xp: Int, val stars: Int, val answered: Int, val correct: Int, val bestCombo: Int, val streak: Int, val levelsDone: Int,
-                 val threeStar: Int, val mastered: Int, val daily: Int, val coins: Int, val race: Int, val games: Int)
+                 val threeStar: Int, val mastered: Int, val daily: Int, val coins: Int, val race: Int, val games: Int,
+                 val runBest: Int = 0, val runWords: Int = 0, val art: Int = 0, val cube: Int = 0)
 data class Badge(val id: String, val emoji: String, val name: String, val desc: String, val ok: (Stats) -> Boolean)
 val badges: List<Badge> = buildList {
     fun b(id: String, e: String, n: String, d: String, f: (Stats) -> Boolean) = add(Badge(id, e, n, d, f))
@@ -121,6 +122,11 @@ val badges: List<Badge> = buildList {
     listOf(10, 25, 50, 100).forEach { n -> b("star$n", "⭐", "$n Stars", "Collect $n stars") { s -> s.stars >= n } }
     listOf(100, 500, 1000).forEach { n -> b("xp$n", "⚡", "$n XP", "Earn $n XP") { s -> s.xp >= n } }
     listOf(5, 10, 15).forEach { n -> b("race$n", "🏁", "Race $n", "Build $n words in a race") { s -> s.race >= n } }
+    b("dash1", "🚀", "Rocket Rider", "Spell a word in Letter Dash 3D") { it.runWords >= 1 }
+    listOf(5, 20, 50).forEach { n -> b("dashw$n", "🛸", "Dash $n Words", "Spell $n words in Letter Dash 3D") { s -> s.runWords >= n } }
+    listOf(400, 800, 1200).forEach { n -> b("dashs$n", "🏎️", "Dash Score $n", "Score $n in Letter Dash 3D") { s -> s.runBest >= n } }
+    listOf(1, 5).forEach { n -> b("art$n", "🎨", if (n == 1) "Little Artist" else "Art Studio", "Finish $n paintings in Paint Studio") { s -> s.art >= n } }
+    listOf(3, 10, 25).forEach { n -> b("cube$n", "🧊", "Cube Master $n", "Find $n letters on the 3D cube") { s -> s.cube >= n } }
     b("rich", "💰", "Piggy Bank", "Save 100 coins") { it.coins >= 100 }
     b("games10", "🎮", "Game Lover", "Play 10 games") { it.games >= 10 }
 }

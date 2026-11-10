@@ -87,15 +87,21 @@ val words4 = listOf(Word("BOOK","📚"),Word("TREE","🌳"),Word("MILK","🥛"),
     var i by remember { mutableIntStateOf(0) }
     val l = alphabet[i]
     LaunchedEffect(i) { v.say("${l.c}. ${l.c} for ${l.word}") }
-    Column(Modifier.fillMaxSize(), Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-        Big("${l.c}${l.c.lowercaseChar()}", 120)
-        Big(l.emoji, 120); Big(l.word, 32)
-        Button({ v.say("${l.c} for ${l.word}") }, Modifier.fillMaxWidth()) { Text("🔊 Hear it") }
-        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-            Button({ if (i > 0) i-- }, Modifier.weight(1f)) { Text("◀") }
-            Button({ if (i < 25) i++ else back() }, Modifier.weight(1f)) { Text(if (i < 25) "▶" else "Done ✔") }
+    Column(Modifier.fillMaxSize(), Arrangement.spacedBy(12.dp)) {
+        TopBar("Alphabet World", back) { Chip("${i + 1}/26") }
+        Bar((i + 1) / 26f)
+        GCard(Modifier.fillMaxWidth().weight(1f), { v.say("${l.c} for ${l.word}") }) {
+            Column(Modifier.fillMaxSize(), Arrangement.spacedBy(6.dp, Alignment.CenterVertically), Alignment.CenterHorizontally) {
+                Big("${l.c}${l.c.lowercaseChar()}", 110)
+                key(i) { Pop { Text(l.emoji, fontSize = 110.sp) } }
+                Big(l.word, 32)
+                Text("🔊 tap the card to hear it", fontSize = 12.sp, color = Color(0xFF2B2B44))
+            }
         }
-        TextButton(back) { Text("Home") }
+        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
+            PBtn("◀", { if (i > 0) i-- }, Modifier.weight(1f), 56.dp, listOf(Color(0xFF9B7BFF), Color(0xFF6C4DF4)))
+            PBtn(if (i < 25) "▶" else "Done ✔", { if (i < 25) i++ else back() }, Modifier.weight(1f), 56.dp)
+        }
     }
 }
 
@@ -181,8 +187,8 @@ val stories = listOf(
             }
         }
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-            Button({ strokes.clear() }, Modifier.weight(1f)) { Text("Clear") }
-            Button({ star(); v.say("Beautiful! One star!"); if (i < 25) i++ else back() }, Modifier.weight(2f)) { Text("Done ⭐") }
+            PBtn("Clear", { strokes.clear() }, Modifier.weight(1f), 52.dp, listOf(Color(0xFF9B7BFF), Color(0xFF6C4DF4)))
+            PBtn("Done ⭐", { star(); v.say("Beautiful! One star!"); if (i < 25) i++ else back() }, Modifier.weight(2f), 52.dp)
         }
         TextButton(back) { Text("Home") }
     }

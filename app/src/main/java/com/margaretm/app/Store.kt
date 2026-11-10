@@ -11,10 +11,11 @@ data class Profile(
     val xp: Int = 0, val coins: Int = 0, val answered: Int = 0, val correct: Int = 0, val bestCombo: Int = 0,
     val levels: Map<Int, Int> = emptyMap(), val mastery: Map<String, Int> = emptyMap(), val badges: Set<String> = emptySet(),
     val daily: Int = 0, val dailyDay: String = "", val race: Int = 0, val games: Int = 0,
-    val history: Map<String, Int> = emptyMap(), val ownedAv: Set<String> = emptySet(), val ownedTheme: Set<Int> = setOf(0), val theme: Int = 0) {
+    val history: Map<String, Int> = emptyMap(), val ownedAv: Set<String> = emptySet(), val ownedTheme: Set<Int> = setOf(0), val theme: Int = 0,
+    val runBest: Int = 0, val runWords: Int = 0, val chestDay: String = "", val art: Int = 0, val cube: Int = 0) {
     val level get() = levelOf(xp)
     fun stats() = Stats(xp, stars, answered, correct, bestCombo, streak, levels.count { it.value >= 1 }, levels.count { it.value >= 3 },
-        mastery.count { it.value >= 3 }, daily, coins, race, games)
+        mastery.count { it.value >= 3 }, daily, coins, race, games, runBest, runWords, art, cube)
     fun today(): Int = history[dayKey(System.currentTimeMillis())] ?: 0
     fun accuracy() = if (answered == 0) 0 else correct * 100 / answered
 }
@@ -46,7 +47,8 @@ class Store(ctx: Context) {
                 o.optInt("xp"), o.optInt("coins"), o.optInt("answered"), o.optInt("correct"), o.optInt("bestCombo"),
                 intMap(o.optJSONObject("levels")).mapKeys { e -> e.key.toInt() }, intMap(o.optJSONObject("mastery")), strSet(o.optJSONArray("badges")),
                 o.optInt("daily"), o.optString("dailyDay"), o.optInt("race"), o.optInt("games"), intMap(o.optJSONObject("history")),
-                strSet(o.optJSONArray("ownedAv")), strSet(o.optJSONArray("ownedTheme")).map { s -> s.toInt() }.toSet().ifEmpty { setOf(0) }, o.optInt("theme")) }
+                strSet(o.optJSONArray("ownedAv")), strSet(o.optJSONArray("ownedTheme")).map { s -> s.toInt() }.toSet().ifEmpty { setOf(0) }, o.optInt("theme"),
+                o.optInt("runBest"), o.optInt("runWords"), o.optString("chestDay"), o.optInt("art"), o.optInt("cube")) }
     }
     private fun save(l: List<Profile>) {
         val arr = JSONArray()
@@ -55,7 +57,7 @@ class Store(ctx: Context) {
             .put("bestCombo", k.bestCombo).put("levels", JSONObject(k.levels.mapKeys { it.key.toString() })).put("mastery", JSONObject(k.mastery))
             .put("badges", JSONArray(k.badges.toList())).put("daily", k.daily).put("dailyDay", k.dailyDay).put("race", k.race).put("games", k.games)
             .put("history", JSONObject(k.history)).put("ownedAv", JSONArray(k.ownedAv.toList())).put("ownedTheme", JSONArray(k.ownedTheme.map { it.toString() }))
-            .put("theme", k.theme)) }
+            .put("theme", k.theme).put("runBest", k.runBest).put("runWords", k.runWords).put("chestDay", k.chestDay).put("art", k.art).put("cube", k.cube)) }
         p.edit().putString("kids", arr.toString()).apply()
     }
     fun addKid(n: String, a: String): Profile { val k = Profile(UUID.randomUUID().toString(), n, a, ownedAv = setOf(a)); save(profiles() + k); return k }
