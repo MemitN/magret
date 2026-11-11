@@ -105,13 +105,13 @@ private fun DrawScope.wall(cam: Cam, color: Color, x: Float, za: Float, zb: Floa
 
 fun fog(z: Float) = ((34f - z) / 18f).coerceIn(0f, 1f)
 private fun hash(i: Int): Float { val s = sin(i * 12.9898 + 4.1414) * 43758.5453; return abs(s - floor(s)).toFloat() }
-private val laneCols = listOf(Color(0xFFFF6FB5), Color(0xFF3DB9FF), Color(0xFFFFB400))   // left, middle, right gate colours
+private val laneCols = listOf(Color(0xFF2E4359), Color(0xFF3A546E), Color(0xFF2A3E52))   // left, middle, right gate colours
 
 // ---------- Scenery ----------
 fun DrawScope.drawSky(cam: Cam, pal: Pal, t: Float, px: Float) {
-    val top = lerp(Color(0xFF070618), pal.a1, .30f); val mid = lerp(Color(0xFF1B1245), pal.a2, .40f)
+    val top = lerp(Color(0xFF05080C), pal.a1, .30f); val mid = lerp(Color(0xFF0F1A24), pal.a2, .40f)
     drawRect(Brush.verticalGradient(colors = listOf(top, mid), startY = 0f, endY = cam.hor), Offset.Zero, Size(cam.w, cam.hor + 1f))
-    drawRect(Brush.verticalGradient(colors = listOf(lerp(mid, Color.Black, .35f), Color(0xFF07061A)), startY = cam.hor, endY = cam.h), Offset(0f, cam.hor), Size(cam.w, cam.h - cam.hor))
+    drawRect(Brush.verticalGradient(colors = listOf(lerp(mid, Color.Black, .35f), Color(0xFF05080C)), startY = cam.hor, endY = cam.h), Offset(0f, cam.hor), Size(cam.w, cam.h - cam.hor))
     for (i in 0 until 46) {
         val x = hash(i * 2) * cam.w - px * 6f; val y = hash(i * 2 + 1) * cam.hor * .92f
         drawCircle(Color.White.copy(alpha = (.30f + .45f * (.5f + .5f * sin(t * 2f + i))).coerceIn(0f, 1f)), 1.5f + hash(i + 99) * 2.2f, Offset((x + cam.w) % cam.w, y))
@@ -119,8 +119,8 @@ fun DrawScope.drawSky(cam: Cam, pal: Pal, t: Float, px: Float) {
     val pc = Offset(cam.w * .74f - px * 12f, cam.hor * .42f); val pr = cam.w * .11f
     drawCircle(Brush.radialGradient(colors = listOf(lerp(pal.a2, Color.White, .35f), pal.a1), center = pc, radius = pr), pr, pc)
     rotate(-18f, pc) { drawOval(Color.White.copy(alpha = .55f), Offset(pc.x - pr * 1.7f, pc.y - pr * .32f), Size(pr * 3.4f, pr * .64f), style = Stroke(width = 5f)) }
-    ridge(cam, lerp(Color(0xFF1B1245), pal.a1, .25f), cam.hor * .20f, .006f, px * 18f)
-    ridge(cam, lerp(Color(0xFF0E0B2B), pal.a1, .15f), cam.hor * .12f, .011f, px * 34f + 300f)
+    ridge(cam, lerp(Color(0xFF0F1A24), pal.a1, .25f), cam.hor * .20f, .006f, px * 18f)
+    ridge(cam, lerp(Color(0xFF0A121A), pal.a1, .15f), cam.hor * .12f, .011f, px * 34f + 300f)
     drawRect(Brush.verticalGradient(colors = listOf(Color.Transparent, pal.a2.copy(alpha = .45f)), startY = cam.hor - 60f, endY = cam.hor), Offset(0f, cam.hor - 60f), Size(cam.w, 60f))
 }
 private fun DrawScope.ridge(cam: Cam, color: Color, amp: Float, freq: Float, shift: Float) {
@@ -133,8 +133,8 @@ private fun DrawScope.ridge(cam: Cam, color: Color, amp: Float, freq: Float, shi
 /** The glowing road with side rails and tall crystal pylons. [dist] is how far the player has travelled. */
 fun DrawScope.drawRoad(cam: Cam, pal: Pal, dist: Float) {
     val band = 2f; val far = 46f; val zMin = -cam.back + 0.5f
-    val fogC = lerp(lerp(Color(0xFF1B1245), pal.a2, .40f), Color.Black, .2f)
-    val roadA = lerp(Color(0xFF1C1946), pal.a1, .24f); val roadB = lerp(Color(0xFF15123A), pal.a1, .12f)
+    val fogC = lerp(lerp(Color(0xFF0F1A24), pal.a2, .40f), Color.Black, .2f)
+    val roadA = lerp(Color(0xFF101A24), pal.a1, .24f); val roadB = lerp(Color(0xFF0C141C), pal.a1, .12f)
     var k = floor(dist / band).toInt() - 1   // one band behind the player so the road reaches the screen bottom
     while (true) {
         val z0 = k * band - dist; val z1 = z0 + band
@@ -183,7 +183,7 @@ fun DrawScope.drawEntities(cam: Cam, g: RunWorld) {
             }
             EType.ROCK -> {
                 shadowAt(cam, x, e.z, .45f, f)
-                drawMesh(cam, place(OCTA, .46f, .52f, .46f, t * .9f + e.seed, t * 1.4f + e.seed, 0f, x, .5f + bob, e.z), Color(0xFFE2572B), alpha = f, edge = Color(0xFF5A1A0A))
+                drawMesh(cam, place(OCTA, .46f, .52f, .46f, t * .9f + e.seed, t * 1.4f + e.seed, 0f, x, .5f + bob, e.z), Color(0xFFB9473F), alpha = f, edge = Color(0xFFFF8A80))
             }
             EType.COIN -> {
                 val w = cam.scale(e.z) * .34f * max(.12f, abs(cos(t * 4f + e.seed))); val h = cam.scale(e.z) * .34f
@@ -193,7 +193,7 @@ fun DrawScope.drawEntities(cam: Cam, g: RunWorld) {
                 drawOval(Color(0xFFFFE082).copy(alpha = f), Offset(cx - w * .66f, cy - h * .66f), Size(w * 1.32f, h * 1.32f))
             }
             EType.SHIELD, EType.SLOW -> {
-                val c = if (e.type == EType.SHIELD) Color(0xFF29B6F6) else Color(0xFFAB47BC)
+                val c = if (e.type == EType.SHIELD) Color(0xFF7FE7F0) else Color(0xFFC9B8FF)
                 shadowAt(cam, x, e.z, .4f, f)
                 drawMesh(cam, place(OCTA, .36f, .44f, .36f, 0f, t * 2f + e.seed, 0f, x, .55f + bob, e.z), c, alpha = f, edge = Color.White)
                 text2d(if (e.type == EType.SHIELD) "🛡️" else "⏳", cam.sx(x, e.z), cam.sy(1.15f + bob, e.z), cam.scale(e.z) * .5f)
@@ -236,12 +236,12 @@ fun DrawScope.drawScene(cam: Cam, pal: Pal, g: RunWorld?, demoTime: Float, avata
         if (g != null) { drawEntities(cam, g); drawPlayer(cam, g, pal, avatar); drawEffects(cam, g) }
     }
     if (g != null) {
-        if (g.slowT > 0f) drawRect(Color(0xFFAB47BC).copy(alpha = .10f), Offset.Zero, size)
+        if (g.slowT > 0f) drawRect(Color.White.copy(alpha = .05f), Offset.Zero, size)
         if (g.hitFlash > 0f) drawRect(Color(0xFFFF1744).copy(alpha = .32f * g.hitFlash), Offset.Zero, size)
         if (g.bannerT > 0f) {
             val a = (g.bannerT * 2f).coerceIn(0f, 1f); val pulse = 1f + .08f * sin(g.t * 14f)
             text2d(bank.firstOrNull { it.w == g.banner }?.e ?: "🎉", cam.w / 2f, cam.h * .36f, cam.w * .26f * pulse, Color.White.copy(alpha = a))
-            text2d(g.banner, cam.w / 2f, cam.h * .50f, cam.w * .17f * pulse, Color(0xFFFFE066).copy(alpha = a))
+            text2d(g.banner, cam.w / 2f, cam.h * .50f, cam.w * .17f * pulse, Color.White.copy(alpha = a))
         }
     }
 }

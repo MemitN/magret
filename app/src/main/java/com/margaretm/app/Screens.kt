@@ -1,5 +1,7 @@
 package com.margaretm.app
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -49,7 +51,7 @@ import androidx.compose.ui.unit.sp
         OutlinedTextField(email, { email = it.trim() }, Modifier.fillMaxWidth(), label = { Text("Parent email") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(), label = { Text("4-digit PIN") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-        if (err.isNotEmpty()) Text(err, color = Color.Red)
+        if (err.isNotEmpty()) Text(err, color = Warn)
         Btn(if (signup) "Create account" else "Log in") {
             if (!email.contains("@") || pin.length != 4) err = "Enter a valid email and a 4-digit PIN"
             else if (signup) { st.signUp(email, pin); ok() } else if (st.login(email, pin)) ok() else err = "Wrong email or PIN"
@@ -73,7 +75,7 @@ import androidx.compose.ui.unit.sp
         OutlinedTextField(n, { n = it.filter(Char::isLetter).take(12) }, Modifier.fillMaxWidth(), label = { Text("Child's name") }, singleLine = true)
         Big("Pick a friend", 18)
         kidAvatars.take(6).let { Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) { it.forEach { e ->
-            Text(e, fontSize = 36.sp, modifier = Modifier.background(if (e == a) Color(0xFFD6CCFF) else Color.Transparent, RoundedCornerShape(16.dp)).clickable { a = e }.padding(6.dp)) } } }
+            Text(e, fontSize = 36.sp, modifier = Modifier.background(if (e == a) LocalPal.current.a1.copy(alpha = .25f) else Color.Transparent, RoundedCornerShape(16.dp)).clickable { a = e }.padding(6.dp)) } } }
         Btn("Start") { if (n.isNotBlank()) save(n.trim().lowercase().replaceFirstChar { it.uppercase() }, a) }
         TextButton(back) { Text("Back") }
     }
@@ -82,6 +84,7 @@ import androidx.compose.ui.unit.sp
 // ---------- Home ----------
 data class Tl(val e: String, val t: String, val s: String, val route: String)
 @Composable fun HomeScreen(k: Profile, goal: Int, v: Voice, openChest: () -> Int, go: (String) -> Unit) {
+    val fx = LocalSfx.current
     LaunchedEffect(Unit) { v.say("Hi ${k.name}! What shall we play?") }
     val today = dayKey(System.currentTimeMillis()); val dailyDone = k.dailyDay == today
     val doneToday = k.today(); val weak = weakWords(k.mastery, 6).size
@@ -96,31 +99,34 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
         Tl("✍️", "Trace Letters", "", "trace"), Tl("🧺", "Alphabet Basket", "", "basket"), Tl("🐱", "3-letter words", "", "words3"), Tl("📚", "4-letter words", "", "words4"),
         Tl("🏆", "Leaderboard", "", "board"), Tl("👪", "Switch player", "", "profiles"))
     @Composable fun grid(l: List<Tl>, off: Int) = l.chunked(2).forEachIndexed { r, row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-        row.forEachIndexed { c, g -> Tile(g.e, g.t, g.s, cardColors[(r + c + off) % 4], Modifier.weight(1f)) { go(g.route) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } }
+        row.forEachIndexed { c, g -> Tile(g.e, g.t, g.s, emptyList(), Modifier.weight(1f)) { go(g.route) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } }
     Scroll {
+        // header: who + currency
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Ring(levelProgress(k.xp), 84.dp, "Lv ${k.level}", "${k.xp} XP"); Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) { Text("${k.av} Hi ${k.name}!", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Ink); Text(rankName(k.level), fontSize = 14.sp, color = Ink) }
-            Column(horizontalAlignment = Alignment.End) { Chip("🪙 ${k.coins}"); Spacer(Modifier.height(4.dp)); Chip("🔥 ${k.streak}") }
+            Text(k.av, fontSize = 34.sp); Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) { Text("Hi, ${k.name}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ink); Text("LEVEL ${k.level} · ${rankName(k.level).uppercase()}", fontSize = 11.sp, color = Muted, letterSpacing = 1.4.sp) }
+            Chip("🪙 ${k.coins}"); Spacer(Modifier.width(6.dp)); Chip("🔥 ${k.streak}")
         }
-        GCard(Modifier.fillMaxWidth()) { Text("Today's goal: $doneToday / $goal answers", fontWeight = FontWeight.Bold, color = Ink); Spacer(Modifier.height(6.dp)); Bar(doneToday.toFloat() / goal)
-            if (doneToday >= goal) Text("🎉 Goal reached! Amazing!", fontSize = 13.sp, color = Ink) }
-        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-            GCard(Modifier.weight(1f), { if (chestReady) { val c = openChest(); chestMsg = "You found 🪙 $c!"; v.say("You found $c coins!") } }) {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (chestReady) Mascot("🎁", 36) else Text("✅", fontSize = 36.sp)
-                    Text(if (chestReady) "Daily gift" else "Gift opened", fontWeight = FontWeight.Bold, color = Ink)
-                    Text(if (chestMsg.isNotEmpty()) chestMsg else if (chestReady) "Tap to open!" else "Back tomorrow", fontSize = 12.sp, color = Ink, textAlign = TextAlign.Center) } }
-            GCard(Modifier.weight(1f), { v.say("Word of the day: ${wod.w.lowercase()}. ${wod.w.toList().joinToString(" ")}. ${wod.w.lowercase()}") }) {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(wod.e, fontSize = 36.sp); Text(wod.w, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Ink)
-                    Text("Word of the day 🔊", fontSize = 12.sp, color = Ink, textAlign = TextAlign.Center) } }
+        Bar(levelProgress(k.xp), Modifier.padding(top = 2.dp))
+        // primary actions
+        if (next != null) PBtn("Continue · ${next.world.substringBefore(' ')} level ${next.n}", { go("level:${next.n}") }, h = 60.dp)
+        PBtn(if (dailyDone) "Daily challenge ✔  play again" else "Daily challenge  +bonus", { go("daily") }, h = 52.dp, ghost = true)
+        // today: goal | gift | word
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), Arrangement.spacedBy(10.dp)) {
+            GCard(Modifier.weight(1.25f).fillMaxHeight()) { Text("TODAY", fontSize = 11.sp, color = Muted, letterSpacing = 1.6.sp); Spacer(Modifier.height(4.dp))
+                Text("$doneToday / $goal", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ink); Text(if (doneToday >= goal) "Goal reached" else "answers", fontSize = 12.sp, color = Muted)
+                Spacer(Modifier.weight(1f)); Bar((doneToday.toFloat() / goal)) }
+            GCard(Modifier.weight(1f).fillMaxHeight(), { if (chestReady) { val c = openChest(); chestMsg = "+$c 🪙"; fx?.open(); v.say("You found $c coins!") } }) {
+                Text("GIFT", fontSize = 11.sp, color = Muted, letterSpacing = 1.6.sp); Spacer(Modifier.weight(1f))
+                if (chestReady) Mascot("🎁", 30) else Text("✓", fontSize = 28.sp, color = LocalPal.current.a1)
+                Text(if (chestMsg.isNotEmpty()) chestMsg else if (chestReady) "Tap to open" else "Tomorrow", fontSize = 12.sp, color = Muted) }
+            GCard(Modifier.weight(1f).fillMaxHeight(), { v.say("Word of the day: ${wod.w.lowercase()}. ${wod.w.toList().joinToString(" ")}. ${wod.w.lowercase()}") }) {
+                Text("WORD", fontSize = 11.sp, color = Muted, letterSpacing = 1.6.sp); Spacer(Modifier.weight(1f))
+                Text(wod.e, fontSize = 28.sp); Text(wod.w, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Ink, maxLines = 1) }
         }
-        PBtn(if (dailyDone) "🎯 Daily challenge done ✔ (play again)" else "🎯 Daily Challenge · +bonus", { go("daily") }, cols = listOf(Color(0xFFFFB400), Color(0xFFFF5E8A)))
-        if (next != null) PBtn("🗺️ Continue: ${next.world.substringBefore(' ')} – level ${next.n}", { go("level:${next.n}") }, cols = listOf(Color(0xFF22C1A5), Color(0xFF3DB9FF)))
         Hero3D(k.runBest, { go("runner") }, { go("cube") })
-        Section("Practice"); grid(practice, 0)
-        Section("Games"); grid(games, 1)
+        Section("Learn"); grid(practice, 0)
+        Section("Play"); grid(games, 1)
         Section("Create & explore"); grid(creative, 2)
         Spacer(Modifier.height(8.dp))
     }
@@ -132,20 +138,26 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
     val cur = adventure.firstOrNull { (k.levels[it.n] ?: 0) == 0 }?.n
     Scroll {
         val done = k.levels.count { it.value >= 1 }
-        Big("🗺️ Adventure Map", 30); Big("$done / ${adventure.size} levels · ${k.levels.values.sum()} ⭐", 14)
+        Text("Adventure map", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+        Text("$done / ${adventure.size} levels · ${k.levels.values.sum()} ★", fontSize = 13.sp, color = Muted)
+        Bar(done.toFloat() / adventure.size)
+        val pal = LocalPal.current
         worlds.forEachIndexed { w, name ->
             val got = adventure.count { it.n in (w * 8 + 1)..(w * 8 + 8) && (k.levels[it.n] ?: 0) >= 1 }
-            Box(Modifier.fillMaxWidth().background(Brush.horizontalGradient(cardColors[w % 4]), RoundedCornerShape(18.dp)).padding(12.dp)) {
-                Text("$name   $got/8", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(name.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Muted, letterSpacing = 1.6.sp, modifier = Modifier.weight(1f))
+                Text("$got/8", fontSize = 12.sp, color = if (got == 8) pal.a1 else Muted) }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
             adventure.filter { it.n in (w * 8 + 1)..(w * 8 + 8) }.chunked(4).forEachIndexed { r, row ->
                 val ordered = if (r % 2 == 0) row else row.reversed()
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) { ordered.forEach { lv ->
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), Arrangement.SpaceEvenly) { ordered.forEach { lv ->
                     val s = k.levels[lv.n] ?: 0; val open = lv.n == 1 || (k.levels[lv.n - 1] ?: 0) >= 1
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).alpha(if (open) 1f else .5f)) {
-                        Box(Modifier.size(64.dp).scale(if (lv.n == cur) pulse else 1f).shadow(8.dp, CircleShape).background(Brush.linearGradient(if (!open) listOf(Color.Gray, Color.LightGray) else cardColors[w % 4]), CircleShape)
-                            .clickable(enabled = open) { play(lv.n) }, Alignment.Center) { Text(if (open) "${lv.n}" else "🔒", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White) }
-                        Text(if (open) "⭐".repeat(s) + "☆".repeat(3 - s) else "", fontSize = 11.sp)
-                        Text(if (lv.n % 8 == 0) "👑" else lv.kind.emoji, fontSize = 14.sp)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp).alpha(if (open) 1f else .4f)) {
+                        val ring = if (lv.n == cur) pal.a1 else Hair
+                        Box(Modifier.size(58.dp).scale(if (lv.n == cur) pulse else 1f).background(if (s > 0) pal.a1 else Panel2, CircleShape).border(if (lv.n == cur) 2.dp else 1.dp, ring, CircleShape)
+                            .clickable(enabled = open) { play(lv.n) }, Alignment.Center) { Text(if (open) "${lv.n}" else "·", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = if (s > 0) Dark else Ink) }
+                        Text(if (open) "★".repeat(s) + "☆".repeat(3 - s) else "", fontSize = 11.sp, color = pal.a1)
+                        Text(if (lv.n % 8 == 0) "👑" else lv.kind.emoji, fontSize = 13.sp)
                     } } }
             }
         }
@@ -157,7 +169,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
 @Composable fun AwardsScreen(k: Profile) {
     var sel by remember { mutableStateOf<Badge?>(null) }
     Scroll {
-        Big("🏅 Badges", 30); Big("${k.badges.size} of ${badges.size} collected", 14); Bar(k.badges.size.toFloat() / badges.size)
+        Text("Badges", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink); Text("${k.badges.size} of ${badges.size} collected", fontSize = 13.sp, color = Muted); Bar(k.badges.size.toFloat() / badges.size)
         sel?.let { b -> GCard(Modifier.fillMaxWidth()) { Text("${b.emoji} ${b.name}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Ink); Text(b.desc + if (b.id in k.badges) " ✔" else "", color = Ink) } }
         badges.chunked(4).forEach { row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
             row.forEach { b -> val got = b.id in k.badges
@@ -171,7 +183,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
 @Composable fun ShopScreen(k: Profile, v: Voice, buy: (Int) -> Boolean, equipAv: (String) -> Unit, buyAv: (String, Int) -> Boolean, setTheme: (Int) -> Unit) {
     var msg by remember { mutableStateOf("") }
     Scroll {
-        Row(verticalAlignment = Alignment.CenterVertically) { Big("🛍️ Shop", 30); }
+        Text("Shop", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink)
         Chip("🪙 ${k.coins} coins"); if (msg.isNotEmpty()) Text(msg, color = Ink, fontWeight = FontWeight.Bold)
         Section("Themes")
         pals.forEachIndexed { i, p -> val own = i in k.ownedTheme
@@ -183,7 +195,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
         Section("Friends")
         kidAvatars.chunked(4).forEach { row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) { row.forEach { a ->
             val own = a in k.ownedAv || (avatarPrice[a] ?: 0) == 0; val price = avatarPrice[a] ?: 0
-            Column(Modifier.weight(1f).background(if (k.av == a) Color(0xFFFFE9A8) else Color.White, RoundedCornerShape(18.dp)).clickable {
+            Column(Modifier.weight(1f).background(if (k.av == a) LocalPal.current.a1.copy(alpha = .22f) else Panel2, RoundedCornerShape(18.dp)).clickable {
                 if (own) { equipAv(a); msg = "New friend picked!" } else msg = if (buyAv(a, price)) "Unlocked $a! 🎉" else "Need ${price - k.coins} more coins" }.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(a, fontSize = 36.sp); Text(if (own) (if (k.av == a) "✔" else "own") else "🪙 $price", fontSize = 12.sp, color = Ink) } } } }
         Spacer(Modifier.height(8.dp))
@@ -191,7 +203,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
 }
 
 // ---------- Parent zone ----------
-@Composable fun ParentScreen(st: Store, kids: List<Profile>, cfg: Settings, setCfg: (Settings) -> Unit, switchKid: () -> Unit, deleteKid: (String) -> Unit, logout: () -> Unit, refresh: () -> Unit) {
+@Composable fun ParentScreen(st: Store, kids: List<Profile>, cfg: Settings, voiceNames: List<String>, testVoice: () -> Unit, setCfg: (Settings) -> Unit, switchKid: () -> Unit, deleteKid: (String) -> Unit, logout: () -> Unit, refresh: () -> Unit) {
     var ok by remember { mutableStateOf(false) }; var pin by remember { mutableStateOf("") }; var err by remember { mutableStateOf(false) }
     if (!ok) { Column(Modifier.fillMaxSize(), Arrangement.spacedBy(14.dp, Alignment.CenterVertically)) {
         Big("👪 Parent zone", 30); Big("Enter your PIN to continue", 16)
@@ -205,11 +217,17 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
         GCard(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) { Text("🔊 Voice", Modifier.weight(1f), color = Ink, fontWeight = FontWeight.Bold); Switch(cfg.voiceOn, { setCfg(cfg.copy(voiceOn = it)) }) }
             Text("Speaking speed", color = Ink); Slider(cfg.rate, { setCfg(cfg.copy(rate = it)) }, valueRange = 0.4f..1.2f)
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("🎵 Background music", Modifier.weight(1f), color = Ink, fontWeight = FontWeight.Bold); Switch(cfg.music, { setCfg(cfg.copy(music = it)) }) }
             Row(verticalAlignment = Alignment.CenterVertically) { Text("🔔 Sound effects", Modifier.weight(1f), color = Ink, fontWeight = FontWeight.Bold); Switch(cfg.sound, { setCfg(cfg.copy(sound = it)) }) }
+            Text("Voice style (tap to hear)", color = Ink)
+            Row(Modifier.horizontalScroll(rememberScrollState()), Arrangement.spacedBy(8.dp)) {
+                listOf("Auto") .plus(voiceNames).forEachIndexed { i, n ->
+                    Box(Modifier.background(if (cfg.voiceIdx == i) LocalPal.current.a1 else Panel2, RoundedCornerShape(16.dp)).clickable { setCfg(cfg.copy(voiceIdx = i)); testVoice() }.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                        Text(n, color = if (cfg.voiceIdx == i) Dark else Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) } } }
             Text("Daily goal (answers per day)", color = Ink)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(5, 10, 20, 40).forEach { g ->
-                Box(Modifier.background(if (cfg.goal == g) LocalPal.current.a1 else Color(0x14000000), RoundedCornerShape(16.dp)).clickable { setCfg(cfg.copy(goal = g)) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("$g", color = if (cfg.goal == g) Color.White else Ink, fontWeight = FontWeight.Bold) } } }
+                Box(Modifier.background(if (cfg.goal == g) LocalPal.current.a1 else Panel2, RoundedCornerShape(16.dp)).clickable { setCfg(cfg.copy(goal = g)) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("$g", color = if (cfg.goal == g) Dark else Ink, fontWeight = FontWeight.Bold) } } }
         }
         Section("Progress")
         kids.forEach { k ->
@@ -221,15 +239,15 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
                 Spacer(Modifier.height(8.dp)); WeekChart(k)
                 val weak = weakWords(k.mastery, 5)
                 if (weak.isNotEmpty()) Text("Needs practice: " + weak.joinToString(", ") { it.lowercase() }, fontSize = 13.sp, color = Ink, fontWeight = FontWeight.Bold)
-                if (confirmDel == k.id) Row { TextButton({ deleteKid(k.id); confirmDel = null }) { Text("Yes, delete ${k.name}", color = Color.Red) }; TextButton({ confirmDel = null }) { Text("Cancel") } }
-                else TextButton({ confirmDel = k.id }) { Text("Delete player", color = Color.Red) }
+                if (confirmDel == k.id) Row { TextButton({ deleteKid(k.id); confirmDel = null }) { Text("Yes, delete ${k.name}", color = Warn) }; TextButton({ confirmDel = null }) { Text("Cancel") } }
+                else TextButton({ confirmDel = k.id }) { Text("Delete player", color = Warn) }
             }
         }
         Section("Security")
         OutlinedTextField(newPin, { newPin = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(), label = { Text("New 4-digit PIN") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
         PBtn("Change PIN", { if (newPin.length == 4) { st.changePin(newPin); newPin = "" } }, h = 52.dp)
-        PBtn("Switch player", { switchKid() }, h = 52.dp, cols = listOf(Color(0xFF22C1A5), Color(0xFF3DB9FF)))
+        PBtn("Switch player", { switchKid() }, h = 52.dp, ghost = true)
         TextButton(logout) { Text("Log out parent") }
         Spacer(Modifier.height(8.dp))
     }
@@ -250,7 +268,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
     val sorted = kids.sortedWith(compareByDescending<Profile> { it.xp }.thenByDescending { it.stars })
     Scroll {
         Big("🏆 Leaderboard", 32); Big("Ranked by XP · best Word Race ${sorted.maxOfOrNull { it.best } ?: 0}", 13)
-        sorted.forEachIndexed { i, k -> Row(Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp)).background(if (k.id == me) Color(0xFFFFE9A8) else Color.White, RoundedCornerShape(20.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        sorted.forEachIndexed { i, k -> Row(Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp)).background(if (k.id == me) LocalPal.current.a1.copy(alpha = .22f) else Panel, RoundedCornerShape(20.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(listOf("🥇", "🥈", "🥉").getOrElse(i) { "${i + 1}" }, fontSize = 28.sp); Spacer(Modifier.width(10.dp)); Text(k.av, fontSize = 32.sp); Spacer(Modifier.width(10.dp))
             Text(k.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink, modifier = Modifier.weight(1f)); Text("Lv ${k.level} · ⚡${lbl(k.xp)} · 🏁${k.best}", fontSize = 13.sp, color = Ink) } }
         Btn("Back") { back() }

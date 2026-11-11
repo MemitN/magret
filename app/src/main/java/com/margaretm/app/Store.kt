@@ -19,7 +19,7 @@ data class Profile(
     fun today(): Int = history[dayKey(System.currentTimeMillis())] ?: 0
     fun accuracy() = if (answered == 0) 0 else correct * 100 / answered
 }
-data class Settings(val voiceOn: Boolean = true, val rate: Float = 0.8f, val sound: Boolean = true, val goal: Int = 10)
+data class Settings(val voiceOn: Boolean = true, val rate: Float = 0.8f, val sound: Boolean = true, val goal: Int = 10, val music: Boolean = true, val voiceIdx: Int = 0)
 
 class Store(ctx: Context) {
     private val p = ctx.getSharedPreferences("mm2", Context.MODE_PRIVATE)
@@ -34,8 +34,8 @@ class Store(ctx: Context) {
         set(v) { p.edit().putString("active", v).apply() }
 
     var settings: Settings
-        get() = Settings(p.getBoolean("s_voice", true), p.getFloat("s_rate", 0.8f), p.getBoolean("s_sound", true), p.getInt("s_goal", 10))
-        set(s) { p.edit().putBoolean("s_voice", s.voiceOn).putFloat("s_rate", s.rate).putBoolean("s_sound", s.sound).putInt("s_goal", s.goal).apply() }
+        get() = Settings(p.getBoolean("s_voice", true), p.getFloat("s_rate", 0.8f), p.getBoolean("s_sound", true), p.getInt("s_goal", 10), p.getBoolean("s_music", true), p.getInt("s_vidx", 0))
+        set(s) { p.edit().putBoolean("s_voice", s.voiceOn).putFloat("s_rate", s.rate).putBoolean("s_sound", s.sound).putInt("s_goal", s.goal).putBoolean("s_music", s.music).putInt("s_vidx", s.voiceIdx).apply() }
 
     private fun intMap(o: JSONObject?): Map<String, Int> = o?.let { j -> j.keys().asSequence().associateWith { j.getInt(it) } } ?: emptyMap()
     private fun strSet(a: JSONArray?): Set<String> = a?.let { (0 until it.length()).map { i -> it.getString(i) }.toSet() } ?: emptySet()

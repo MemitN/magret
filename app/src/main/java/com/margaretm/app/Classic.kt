@@ -1,5 +1,6 @@
 package com.margaretm.app
 
+import androidx.compose.foundation.border
 import android.content.Context
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -56,7 +57,7 @@ data class Word(val w: String, val emoji: String)
 val words3 = listOf(Word("CAT","🐱"),Word("DOG","🐶"),Word("SUN","☀️"),Word("CAR","🚗"),Word("BUG","🐞"))
 val words4 = listOf(Word("BOOK","📚"),Word("TREE","🌳"),Word("MILK","🥛"),Word("FISH","🐠"),Word("DOOR","🚪"),Word("HAND","✋"))
 
-@Composable fun Big(t: String, size: Int = 28) = Text(t, fontSize = size.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+@Composable fun Big(t: String, size: Int = 28) = Text(t, fontSize = (if (size >= 24) size - 4 else size).sp, color = if (size >= 24) Ink else Muted, fontWeight = if (size >= 24) FontWeight.SemiBold else FontWeight.Normal, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
 
 
@@ -95,11 +96,11 @@ val words4 = listOf(Word("BOOK","📚"),Word("TREE","🌳"),Word("MILK","🥛"),
                 Big("${l.c}${l.c.lowercaseChar()}", 110)
                 key(i) { Pop { Text(l.emoji, fontSize = 110.sp) } }
                 Big(l.word, 32)
-                Text("🔊 tap the card to hear it", fontSize = 12.sp, color = Color(0xFF2B2B44))
+                Text("🔊 tap the card to hear it", fontSize = 12.sp, color = Muted)
             }
         }
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-            PBtn("◀", { if (i > 0) i-- }, Modifier.weight(1f), 56.dp, listOf(Color(0xFF9B7BFF), Color(0xFF6C4DF4)))
+            PBtn("◀", { if (i > 0) i-- }, Modifier.weight(1f), 56.dp, ghost = true)
             PBtn(if (i < 25) "▶" else "Done ✔", { if (i < 25) i++ else back() }, Modifier.weight(1f), 56.dp)
         }
     }
@@ -120,13 +121,13 @@ val words4 = listOf(Word("BOOK","📚"),Word("TREE","🌳"),Word("MILK","🥛"),
             LazyVerticalGrid(GridCells.Fixed(4), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(bank.indices.toList()) { k ->
                     val used1 = k in used
-                    Box(Modifier.aspectRatio(1f).background(if (used1) Color.LightGray else Color(0xFF6C4DF4), RoundedCornerShape(16.dp))
+                    Box(Modifier.aspectRatio(1f).background(if (used1) Panel else LocalPal.current.a1, RoundedCornerShape(16.dp))
                         .clickable(enabled = !used1) {
                             if (bank[k] == w.w[placed.length]) {
                                 placed += bank[k]; used = used + k; v.say(bank[k].toString())
                                 if (placed == w.w) { star(); v.say("You did it, $name! ${w.w.toList().joinToString(" ")} spells ${w.w.lowercase()}! One star!") }
                             } else v.say("Oops, try again with me!")
-                        }, Alignment.Center) { Text(bank[k].toString(), fontSize = 36.sp, color = Color.White) }
+                        }, Alignment.Center) { Text(bank[k].toString(), fontSize = 36.sp, color = Dark) }
                 }
             }
         } else {
@@ -170,24 +171,25 @@ val stories = listOf(
 @Composable fun Trace(v: Voice, star: () -> Unit, back: () -> Unit) {
     var i by remember { mutableIntStateOf(0) }
     val l = alphabet[i]
+    val ink = LocalPal.current.a1
     val strokes = remember(i) { mutableStateListOf<List<Offset>>() }
     var cur by remember(i) { mutableStateOf(listOf<Offset>()) }
     LaunchedEffect(i) { v.say("Trace big ${l.c}, and small ${l.c.lowercaseChar()}, with your finger. ${l.c} for ${l.word}") }
     Column(Modifier.fillMaxSize(), Arrangement.spacedBy(12.dp)) {
         Big("Trace ${l.c}${l.c.lowercaseChar()}  ${l.emoji}", 30)
-        Box(Modifier.fillMaxWidth().weight(1f).background(Color.White, RoundedCornerShape(24.dp))) {
-            Text("${l.c}${l.c.lowercaseChar()}", fontSize = 200.sp, color = Color(0xFFDDDDDD), modifier = Modifier.align(Alignment.Center))
+        Box(Modifier.fillMaxWidth().weight(1f).background(Panel, RoundedCornerShape(24.dp))) {
+            Text("${l.c}${l.c.lowercaseChar()}", fontSize = 200.sp, color = Hair, modifier = Modifier.align(Alignment.Center))
             Canvas(Modifier.fillMaxSize().pointerInput(i) {
                 detectDragGestures(onDragStart = { cur = listOf(it) }, onDragEnd = { strokes.add(cur); cur = listOf() }, onDrag = { c, _ -> cur = cur + c.position })
             }) {
                 (strokes + listOf(cur)).forEach { s ->
                     if (s.size > 1) { val p = Path(); p.moveTo(s[0].x, s[0].y); s.drop(1).forEach { p.lineTo(it.x, it.y) }
-                        drawPath(p, Color(0xFF6C4DF4), style = Stroke(28f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
+                        drawPath(p, ink, style = Stroke(28f, cap = StrokeCap.Round, join = StrokeJoin.Round)) }
                 }
             }
         }
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-            PBtn("Clear", { strokes.clear() }, Modifier.weight(1f), 52.dp, listOf(Color(0xFF9B7BFF), Color(0xFF6C4DF4)))
+            PBtn("Clear", { strokes.clear() }, Modifier.weight(1f), 52.dp, ghost = true)
             PBtn("Done ⭐", { star(); v.say("Beautiful! One star!"); if (i < 25) i++ else back() }, Modifier.weight(2f), 52.dp)
         }
         TextButton(back) { Text("Home") }
@@ -207,7 +209,7 @@ val stories = listOf(
             LazyVerticalGrid(GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(round) { l ->
                     val inn = l.c in inBasket
-                    Box(Modifier.aspectRatio(1f).background(if (inn) Color.LightGray else Color.White, RoundedCornerShape(20.dp)).clickable(enabled = !inn) {
+                    Box(Modifier.aspectRatio(1f).background(if (inn) Panel else Panel2, RoundedCornerShape(20.dp)).clickable(enabled = !inn) {
                         inBasket = inBasket + l.c; v.say("${l.c} for ${l.word}")
                         if (inBasket.size == 6) { star(); v.say("Good job $name! You cleaned up! One star!") }
                     }, Alignment.Center) { Text(if (inn) "✔" else "${l.emoji}\n${l.c}${l.c.lowercaseChar()}", fontSize = 30.sp, textAlign = TextAlign.Center) }
@@ -234,9 +236,9 @@ val stories = listOf(
             Big(w.emoji, 100); Big(w.w.indices.joinToString("  ") { if (it < placed.length) placed[it].toString() else "_" }, 48)
             LazyVerticalGrid(GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(bank.indices.toList()) { k ->
-                    Box(Modifier.aspectRatio(1.4f).background(Brush.linearGradient(listOf(Purple, Pink)), RoundedCornerShape(18.dp)).clickable {
+                    Box(Modifier.aspectRatio(1.4f).background(Brush.linearGradient(listOf(Panel2, Panel2)), RoundedCornerShape(18.dp)).clickable {
                         if (bank[k] == w.w[placed.length]) { placed += bank[k]; if (placed == w.w) { score++; wi++ } }
-                    }, Alignment.Center) { Text(bank[k].toString(), fontSize = 34.sp, color = Color.White, fontWeight = FontWeight.Bold) }
+                    }, Alignment.Center) { Text(bank[k].toString(), fontSize = 34.sp, color = Ink, fontWeight = FontWeight.Bold) }
                 }
             }
         } else {

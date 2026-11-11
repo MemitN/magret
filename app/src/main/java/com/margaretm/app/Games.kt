@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,10 +30,10 @@ data class QuizSpec(val kind: String, val title: String, val qs: List<Question>,
 data class QuizResult(val correct: Int, val total: Int, val combo: Int)
 
 @Composable fun Choice(t: String, state: Int, mod: Modifier, size: Int, onClick: () -> Unit) {
-    val bg by animateColorAsState(when (state) { 1 -> Color(0xFF2ECC71); 2 -> Color(0xFFFF5252); else -> Color.White }, label = "ch")
+    val bg by animateColorAsState(when (state) { 1 -> Ok.copy(alpha = .28f); 2 -> Warn.copy(alpha = .28f); else -> Panel }, label = "ch")
     val sc by animateFloatAsState(when (state) { 1 -> 1.08f; 2 -> .94f; else -> 1f }, spring(dampingRatio = .4f), label = "cs")
-    Box(mod.scale(sc).alpha(if (state == 3) .45f else 1f).shadow(6.dp, RoundedCornerShape(22.dp)).background(bg, RoundedCornerShape(22.dp)).clickable(onClick = onClick), Alignment.Center) {
-        Text(t, fontSize = size.sp, fontWeight = FontWeight.Bold, color = if (state == 1 || state == 2) Color.White else Ink, textAlign = TextAlign.Center)
+    Box(mod.scale(sc).alpha(if (state == 3) .45f else 1f).background(bg, RoundedCornerShape(22.dp)).border(1.dp, if (state == 1) Ok else if (state == 2) Warn else Hair, RoundedCornerShape(22.dp)).clickable(onClick = onClick), Alignment.Center) {
+        Text(t, fontSize = size.sp, fontWeight = FontWeight.SemiBold, color = Ink, textAlign = TextAlign.Center)
     }
 }
 
@@ -111,10 +112,10 @@ data class QuizResult(val correct: Int, val total: Int, val combo: Int)
                 val face = idx in open || idx in matched
                 val rot by animateFloatAsState(if (face) 180f else 0f, spring(dampingRatio = .7f), label = "flip")
                 Box(Modifier.weight(1f).fillMaxHeight().graphicsLayer { rotationY = rot; cameraDistance = 14f * density }.shadow(6.dp, RoundedCornerShape(18.dp))
-                    .background(if (idx in matched) Color(0xFFBFF3D3) else if (rot > 90f) Color.White else LocalPal.current.a1, RoundedCornerShape(18.dp))
+                    .background(if (idx in matched) Ok.copy(alpha = .25f) else if (rot > 90f) Panel2 else Panel, RoundedCornerShape(18.dp))
                     .clickable { if (!face && open.size < 2 && !won) { open = open + idx } }, Alignment.Center) {
                     if (rot > 90f) Box(Modifier.graphicsLayer { rotationY = 180f }) { val c = cards[idx]; Text(c.second, fontSize = if (c.third) 20.sp else 40.sp, fontWeight = FontWeight.Bold, color = Ink) }
-                    else Text("?", fontSize = 34.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    else Text("?", fontSize = 30.sp, color = LocalPal.current.a1, fontWeight = FontWeight.Light)
                 } } }
         }
         if (won) { Big("🎉 All matched in $moves moves!", 22); Btn("Done") { back() } }

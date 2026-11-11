@@ -10,7 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,7 +22,7 @@ import androidx.compose.ui.unit.dp
 class MainActivity : ComponentActivity() {
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
-        setContent { MaterialTheme { App() } }
+        setContent { App() }
     }
 }
 
@@ -28,10 +31,16 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
 
 @Composable fun App() {
     val ctx = LocalContext.current
-    val st = remember { Store(ctx) }; val voice = remember { Voice(ctx) }; val fx = remember { Sfx() }
-    DisposableEffect(Unit) { onDispose { voice.close(); fx.close() } }
+    val st = remember { Store(ctx) }; val voice = remember { Voice(ctx) }; val fx = remember { Sfx(ctx) }; val music = remember { Music(ctx) }
+    LaunchedEffect(Unit) { voice.music = music }
+    DisposableEffect(Unit) { onDispose { voice.close(); fx.close(); music.close() } }
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) music.resume() else if (e == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) music.pause() }
+        owner.lifecycle.addObserver(ob); onDispose { owner.lifecycle.removeObserver(ob) }
+    }
     var cfg by remember { mutableStateOf(st.settings) }
-    LaunchedEffect(cfg) { voice.on = cfg.voiceOn; voice.rate = cfg.rate; fx.on = cfg.sound }
+    LaunchedEffect(cfg) { voice.on = cfg.voiceOn; voice.rate = cfg.rate; fx.on = cfg.sound; music.on = cfg.music; voice.pick = cfg.voiceIdx }
     var tick by remember { mutableIntStateOf(0) }
     var screen by remember { mutableStateOf(if (st.activeId != null && st.hasAccount() && st.profiles().any { it.id == st.activeId }) "home" else if (st.hasAccount()) "login" else "auth") }
     var quiz by remember { mutableStateOf<QuizSpec?>(null) }
@@ -40,7 +49,7 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
     val kids = remember(tick) { st.profiles() }
     val me = kids.firstOrNull { it.id == st.activeId }
     val pal = pals[(me?.theme ?: 0).coerceIn(0, pals.lastIndex)]
-    fun go(s: String) { screen = s }
+    fun go(s: String) { if (s != screen) fx.tap(); screen = s }
 
     /** Single place where XP, coins, stars and badges are granted. */
     fun reward(xp: Int, coins: Int, stars: Int, combo: Int = 0, edit: (Profile) -> Profile = { it }) {
@@ -89,7 +98,9 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
     }
 
     BackHandler(enabled = screen != "home" && screen != "auth" && screen != "login" && screen != "profiles") { go(if (me != null) "home" else "profiles") }
-    CompositionLocalProvider(LocalPal provides pal) {
+    MaterialTheme(colorScheme = darkColorScheme(primary = pal.a1, onPrimary = Dark, secondary = pal.a2, onSecondary = Dark, background = pal.bg1, onBackground = Ink,
+        surface = Panel, onSurface = Ink, surfaceVariant = Panel2, onSurfaceVariant = Muted, outline = Hair, error = Warn)) {
+    CompositionLocalProvider(LocalPal provides pal, LocalSfx provides fx, LocalContentColor provides Ink) {
         Backdrop {
             Column(Modifier.fillMaxSize().padding(16.dp)) {
                 Box(Modifier.weight(1f)) {
@@ -107,7 +118,7 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
                                 { a -> st.update(k.id) { it.copy(av = a) }; tick++ },
                                 { a, price -> if (k.coins >= price) { st.update(k.id) { it.copy(coins = it.coins - price, ownedAv = it.ownedAv + a, av = a) }; tick++; true } else false },
                                 { i -> st.update(k.id) { it.copy(theme = i) }; tick++ }) }
-                            "parent" -> ParentScreen(st, kids, cfg, { cfg = it; st.settings = it }, { go("profiles") },
+                            "parent" -> ParentScreen(st, kids, cfg, voice.options, { voice.say("Hello! I am your reading buddy.") }, { cfg = it; st.settings = it }, { go("profiles") },
                                 { id -> st.delete(id); tick++; if (st.activeId == null) go("profiles") }, { st.activeId = null; go("login") }, { tick++ })
                             "quiz" -> quiz?.let { q -> QuizScreen(q, voice, fx, { qq, ok -> me?.let { st.record(it.id, qq, ok) } }, { r -> done(q, r) }, { go("home") }) }
                             "result" -> outcome?.let { o -> ResultScreen(o.spec.title, o.r, o.stars, o.xp, o.coins, { launch(o.spec.route) },
@@ -137,5 +148,6 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
             }
             if (fresh.isNotEmpty()) BadgePopup(fresh) { fresh = emptyList() }
         }
+    }
     }
 }

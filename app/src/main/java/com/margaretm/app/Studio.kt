@@ -38,7 +38,7 @@ sealed class Mark
 class LineMark(val color: Color, val w: Float) : Mark() { val pts = mutableStateListOf<Offset>() }
 class StampMark(val e: String, val at: Offset, val size: Float) : Mark()
 
-private val studioColors = listOf(Color(0xFFE53935), Color(0xFFFF9800), Color(0xFFFFD600), Color(0xFF43A047), Color(0xFF1E88E5), Color(0xFF8E24AA), Color(0xFFEC407A), Color(0xFF6D4C41), Color(0xFF212121), Color(0xFFFFFFFF))
+private val studioColors = listOf(Color(0xFFE05A5A), Color(0xFFEB9A4B), Color(0xFFE8CB5A), Color(0xFF5FBF7F), Color(0xFF4F9BE0), Color(0xFF9A7BE0), Color(0xFFD96FA4), Color(0xFF8C6B55), Color(0xFF1B2430), Color(0xFFF2F5F8))   // the one place real colour is welcome: the child's paint box
 
 @Composable fun PaintStudio(v: Voice, onDone: () -> Unit, back: () -> Unit) {
     val pal = LocalPal.current
@@ -56,7 +56,7 @@ private val studioColors = listOf(Color(0xFFE53935), Color(0xFFFF9800), Color(0x
 
     Column(Modifier.fillMaxSize(), Arrangement.spacedBy(8.dp)) {
         TopBar("🎨 Paint Studio", back) { Chip("✨ ${marks.size}") }
-        Box(Modifier.fillMaxWidth().weight(1f).shadow(6.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))) {
+        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(20.dp)).border(1.dp, Hair, RoundedCornerShape(20.dp))) {
             Canvas(Modifier.fillMaxSize()
                 .pointerInput(tool, color, width) {
                     detectTapGestures { o ->
@@ -72,13 +72,13 @@ private val studioColors = listOf(Color(0xFFE53935), Color(0xFFFF9800), Color(0x
                 }) {
                 // scene
                 when (scene) {
-                    0 -> { drawRect(Brush.verticalGradient(listOf(Color(0xFF8FD3FF), Color(0xFFE6F6FF))), Offset.Zero, size)
-                        drawRect(Color(0xFF7BC96F), Offset(0f, size.height * .80f), Size(size.width, size.height * .20f))
-                        drawCircle(Color(0xFFFFE066), size.width * .09f, Offset(size.width * .82f, size.height * .14f)) }
-                    1 -> { drawRect(Brush.verticalGradient(listOf(Color(0xFF0B0A2A), Color(0xFF3B2A7A))), Offset.Zero, size)
+                    0 -> { drawRect(Brush.verticalGradient(listOf(Color(0xFF2B4A63), Color(0xFF4E7391))), Offset.Zero, size)
+                        drawRect(Color(0xFF3E6B53), Offset(0f, size.height * .80f), Size(size.width, size.height * .20f))
+                        drawCircle(Color(0xFFEFE3A3), size.width * .09f, Offset(size.width * .82f, size.height * .14f)) }
+                    1 -> { drawRect(Brush.verticalGradient(listOf(Color(0xFF070B12), Color(0xFF1B2638))), Offset.Zero, size)
                         drawCircle(Color(0xFFFFF3B0), size.width * .07f, Offset(size.width * .8f, size.height * .15f))
                         for (i in 0 until 24) drawCircle(Color.White.copy(alpha = .8f), 2.5f, Offset(((i * 137) % 100) / 100f * size.width, ((i * 59) % 70) / 100f * size.height)) }
-                    else -> drawRect(Color.White, Offset.Zero, size)
+                    else -> drawRect(Color(0xFFF2F5F8), Offset.Zero, size)
                 }
                 for (m in marks) when (m) {
                     is LineMark -> if (m.pts.size > 1) {
@@ -92,28 +92,28 @@ private val studioColors = listOf(Color(0xFFE53935), Color(0xFFFF9800), Color(0x
         }
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
             listOf("✏️ Brush", "🧸 Stickers").forEachIndexed { i, t ->
-                Box(Modifier.weight(1f).background(if (tool == i) pal.a1 else Color.White, RoundedCornerShape(16.dp)).clickable { tool = i; if (i == 1) v.say(stamp.w.lowercase()) }.padding(vertical = 8.dp), Alignment.Center) {
-                    Text(t, fontWeight = FontWeight.Bold, color = if (tool == i) Color.White else Ink) } }
+                Box(Modifier.weight(1f).background(if (tool == i) pal.a1 else Panel2, RoundedCornerShape(14.dp)).clickable { tool = i; if (i == 1) v.say(stamp.w.lowercase()) }.padding(vertical = 8.dp), Alignment.Center) {
+                    Text(t, fontWeight = FontWeight.SemiBold, color = if (tool == i) Dark else Ink) } }
         }
         if (tool == 0) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-            studioColors.forEach { c -> Box(Modifier.size(if (c == color) 42.dp else 34.dp).background(c, CircleShape).border(if (c == color) 3.dp else 1.dp, if (c == color) pal.a1 else Color(0x33000000), CircleShape).clickable { color = c }) }
+            studioColors.forEach { c -> Box(Modifier.size(if (c == color) 42.dp else 34.dp).background(c, CircleShape).border(if (c == color) 3.dp else 1.dp, if (c == color) pal.a1 else Hair, CircleShape).clickable { color = c }) }
             Spacer(Modifier.width(8.dp))
-            listOf(6f, 14f, 28f).forEach { w -> Box(Modifier.size(38.dp).background(if (w == width) Color(0xFFFFE9A8) else Color.White, CircleShape).clickable { width = w }, Alignment.Center) {
+            listOf(6f, 14f, 28f).forEach { w -> Box(Modifier.size(38.dp).background(if (w == width) pal.a1.copy(alpha = .3f) else Panel2, CircleShape).clickable { width = w }, Alignment.Center) {
                 Box(Modifier.size((w / 1.3f + 4f).dp).background(Ink, CircleShape)) } }
         } else {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), Arrangement.spacedBy(6.dp)) {
-                themeNames.forEachIndexed { i, n -> Box(Modifier.background(if (theme == i) pal.a2 else Color.White, RoundedCornerShape(14.dp)).clickable { theme = i; stamp = bank.first { it.theme == themeNames[i] } }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    Text(n, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (theme == i) Color.White else Ink) } }
+                themeNames.forEachIndexed { i, n -> Box(Modifier.background(if (theme == i) pal.a1 else Panel2, RoundedCornerShape(12.dp)).clickable { theme = i; stamp = bank.first { it.theme == themeNames[i] } }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(n, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (theme == i) Dark else Ink) } }
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), Arrangement.spacedBy(6.dp), Alignment.CenterVertically) {
-                items.forEach { it0 -> Box(Modifier.background(if (it0.w == stamp.w) Color(0xFFFFE9A8) else Color.White, RoundedCornerShape(16.dp)).clickable { stamp = it0; v.say(it0.w.lowercase()) }.padding(8.dp)) { Text(it0.e, fontSize = 32.sp) } }
+                items.forEach { it0 -> Box(Modifier.background(if (it0.w == stamp.w) pal.a1.copy(alpha = .3f) else Panel2, RoundedCornerShape(14.dp)).clickable { stamp = it0; v.say(it0.w.lowercase()) }.padding(8.dp)) { Text(it0.e, fontSize = 32.sp) } }
             }
-            Text("Tap the picture to place  ${stamp.e} ${stamp.w}", fontSize = 12.sp, color = Ink, modifier = Modifier.fillMaxWidth())
+            Text("Tap the picture to place  ${stamp.e} ${stamp.w}", fontSize = 12.sp, color = Muted, modifier = Modifier.fillMaxWidth())
         }
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-            MiniBtn("↩ Undo", Modifier.weight(1f), listOf(Color(0xFF6C4DF4), Color(0xFF9B7BFF))) { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }
-            MiniBtn("🖼️ Scene", Modifier.weight(1f), listOf(Color(0xFF22C1A5), Color(0xFF3DB9FF))) { scene = (scene + 1) % 3 }
-            MiniBtn("🗑️ Clear", Modifier.weight(1f), listOf(Color(0xFFFF8A5B), Color(0xFFFF5E8A))) { marks.clear() }
+            MiniBtn("↩ Undo", Modifier.weight(1f), emptyList()) { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }
+            MiniBtn("🖼️ Scene", Modifier.weight(1f), emptyList()) { scene = (scene + 1) % 3 }
+            MiniBtn("🗑️ Clear", Modifier.weight(1f), emptyList()) { marks.clear() }
         }
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -43,7 +44,7 @@ import kotlin.math.roundToInt
 //  Games3D.kt  -  the two 3D activities + the animated 3D hero card used on the Home screen
 // =====================================================================================
 
-private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22C1A5), Color(0xFFFFB400), Color(0xFF3DB9FF), Color(0xFFFF7043))
+private val cubeCols = listOf(Color(0xFF26384B), Color(0xFF1E2F41), Color(0xFF2E4359), Color(0xFF223446), Color(0xFF2A3E53), Color(0xFF1B2B3B))
 
 // ---------------------------------------------------------------------------------
 //  LETTER DASH 3D
@@ -70,10 +71,10 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
             is Ev.Good -> { fx.good(); v.say(e.ch.toString()); hp.performHapticFeedback(HapticFeedbackType.LongPress) }
             is Ev.Bad -> { fx.bad(); v.say("Oops! Look for ${e.need}") }
             is Ev.WordDone -> { fx.win(); v.say("${e.word.lowercase()}! " + if (e.clean) "Perfect!" else "Great job!"); rec(e.word, e.clean) }
-            Ev.Crash -> { fx.bad(); v.say("Ouch! Dodge the rocks!") }
-            Ev.ShieldPop -> { fx.good(); v.say("Your shield saved you!") }
-            Ev.Coin -> fx.good()
-            is Ev.Power -> fx.good()
+            Ev.Crash -> { fx.crash(); v.say("Ouch! Dodge the rocks!") }
+            Ev.ShieldPop -> { fx.power(); v.say("Your shield saved you!") }
+            Ev.Coin -> fx.coin()
+            is Ev.Power -> fx.power()
             is Ev.Over -> if (e.won) fx.win()
         }
         hud++
@@ -100,12 +101,12 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
 
     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp))) {
         Canvas(Modifier.fillMaxSize()
-            .pointerInput(world) { detectTapGestures { o -> world?.move(if (o.x < size.width / 2f) -1 else 1) } }
+            .pointerInput(world) { detectTapGestures { o -> if (world != null) { world?.move(if (o.x < size.width / 2f) -1 else 1); fx.whoosh() } } }
             .pointerInput(world) {
                 var acc = 0f
                 detectHorizontalDragGestures(onDragStart = { acc = 0f }) { ch, d ->
                     ch.consume(); acc += d
-                    if (acc > 50f) { world?.move(1); acc = 0f } else if (acc < -50f) { world?.move(-1); acc = 0f }
+                    if (acc > 50f) { world?.move(1); fx.whoosh(); acc = 0f } else if (acc < -50f) { world?.move(-1); fx.whoosh(); acc = 0f }
                 }
             }) {
             drawScene(Cam(size.width, size.height), pal, world, demo, k.av)
@@ -118,31 +119,32 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
 }
 
 @Composable private fun DashHud(g: RunWorld, @Suppress("UNUSED_PARAMETER") tick: Int, back: () -> Unit) {
+    val fx = LocalSfx.current
     Column(Modifier.fillMaxSize().padding(10.dp), Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).shadow(4.dp, CircleShape).background(Color.White, CircleShape).clickable(onClick = back), Alignment.Center) { Text("←", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Ink) }
+            Box(Modifier.size(40.dp).background(Panel, Shape12).border(1.dp, Hair, Shape12).clickable(onClick = back), Alignment.Center) { Text("←", fontSize = 20.sp, color = Ink) }
             Spacer(Modifier.width(10.dp))
             Text("❤️".repeat(g.hearts.coerceIn(0, 3)) + "🖤".repeat(3 - g.hearts.coerceIn(0, 3)), fontSize = 22.sp, modifier = Modifier.weight(1f))
             if (g.combo >= 2) { Chip("🔥 ${g.combo}"); Spacer(Modifier.width(6.dp)) }
             Chip("⭐ ${g.score}")
         }
-        Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha = .92f), RoundedCornerShape(22.dp)).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Panel.copy(alpha = .88f), RoundedCornerShape(18.dp)).border(1.dp, Hair, RoundedCornerShape(18.dp)).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(g.item.e, fontSize = 40.sp); Spacer(Modifier.width(10.dp))
             Row(Modifier.weight(1f), Arrangement.spacedBy(6.dp)) {
                 g.word.forEachIndexed { i, c ->
                     val now = i == g.idx
-                    Box(Modifier.size(40.dp).background(if (i < g.idx) Color(0xFF2ECC71) else if (now) Color(0xFFFFE066) else Color(0x14000000), RoundedCornerShape(12.dp)), Alignment.Center) {
-                        Text(c.toString(), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = if (i < g.idx) Color.White else if (now) Ink else Color(0x55000000)) }
+                    Box(Modifier.size(40.dp).background(if (i < g.idx) Ok.copy(alpha = .3f) else if (now) LocalPal.current.a1 else Panel2, RoundedCornerShape(10.dp)), Alignment.Center) {
+                        Text(c.toString(), fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = if (i < g.idx) Ok else if (now) Dark else Muted) }
                 }
             }
-            Text("${(g.wi + 1).coerceAtMost(g.words.size)}/${g.words.size}", fontSize = 13.sp, color = Ink, fontWeight = FontWeight.Bold)
+            Text("${(g.wi + 1).coerceAtMost(g.words.size)}/${g.words.size}", fontSize = 13.sp, color = Muted)
         }
         if (g.shield || g.slowT > 0f) Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) { if (g.shield) Chip("🛡️ shield"); if (g.slowT > 0f) Chip("⏳ slow-mo") }
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
             listOf("◀" to -1, "▶" to 1).forEach { (t, d) ->
-                Box(Modifier.weight(1f).height(64.dp).background(Color.White.copy(alpha = .22f), RoundedCornerShape(32.dp)).clickable { g.move(d) }, Alignment.Center) {
-                    Text(t, fontSize = 30.sp, color = Color.White, fontWeight = FontWeight.Bold) }
+                Box(Modifier.weight(1f).height(64.dp).background(Panel.copy(alpha = .7f), RoundedCornerShape(20.dp)).border(1.dp, Hair, RoundedCornerShape(20.dp)).clickable { g.move(d); fx?.whoosh() }, Alignment.Center) {
+                    Text(t, fontSize = 26.sp, color = Ink) }
             }
         }
     }
@@ -159,8 +161,8 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
                 Text("🧊 Pick the next letter   👆 Swipe or tap ◀ ▶\n🪨 Dodge rocks   🛡️ Shield   ⏳ Slow-mo   🪙 Coins", fontSize = 13.sp, color = Ink, textAlign = TextAlign.Center)
                 Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
                     listOf("🐢 Chill", "🚀 Normal", "⚡ Zoom").forEachIndexed { i, t ->
-                        Box(Modifier.weight(1f).background(if (i == speed) pal.a1 else Color(0x14000000), RoundedCornerShape(16.dp)).clickable { setSpeed(i) }.padding(vertical = 10.dp), Alignment.Center) {
-                            Text(t, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (i == speed) Color.White else Ink) } }
+                        Box(Modifier.weight(1f).background(if (i == speed) pal.a1 else Panel2, RoundedCornerShape(14.dp)).clickable { setSpeed(i) }.padding(vertical = 10.dp), Alignment.Center) {
+                            Text(t, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (i == speed) Dark else Ink) } }
                 }
                 if (best > 0) Text("🏆 Your best: $best", fontWeight = FontWeight.Bold, color = Ink)
                 PBtn("Start ▶", start, h = 56.dp)
@@ -171,7 +173,7 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
 }
 
 @Composable private fun DashResult(s: RunSummary, newBest: Boolean, again: () -> Unit, home: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color(0x66000000)).padding(10.dp), Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xAA04080C)).padding(10.dp), Alignment.Center) {
         if (s.stars >= 2) Confetti(s)
         GCard(Modifier.fillMaxWidth()) {
             Column(Modifier.verticalScroll(rememberScrollState()), Arrangement.spacedBy(8.dp), Alignment.CenterHorizontally) {
@@ -232,8 +234,8 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
         Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
             listOf("🔍 Explore", "🎯 Challenge").forEachIndexed { i, t ->
                 val pal = LocalPal.current
-                Box(Modifier.weight(1f).background(if (mode == i) pal.a1 else Color.White, RoundedCornerShape(18.dp)).clickable { setMode(i) }.padding(vertical = 10.dp), Alignment.Center) {
-                    Text(t, fontWeight = FontWeight.Bold, color = if (mode == i) Color.White else Ink) } }
+                Box(Modifier.weight(1f).background(if (mode == i) pal.a1 else Panel2, RoundedCornerShape(14.dp)).clickable { setMode(i) }.padding(vertical = 10.dp), Alignment.Center) {
+                    Text(t, fontWeight = FontWeight.SemiBold, color = if (mode == i) Dark else Ink) } }
         }
         if (mode == 0) Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             TextButton({ group = (group + 4) % 5; settled = -1 }) { Text("◀ Previous") }
@@ -260,7 +262,7 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
             GCard(Modifier.fillMaxWidth(), { v.say("${fl.c}. ${fl.c} for ${fl.word}") }) {
                 Text("${fl.emoji}  ${fl.c} for ${fl.word}   🔊", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Ink, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
             Text("Drag the cube to spin it. Flick for a big spin!", fontSize = 12.sp, color = Ink, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            PBtn("🎲 Spin!", { vy = (if ((0..1).random() == 0) 1 else -1) * (7f + (0..5).random()); vt = ((-3..3).random()).toFloat() }, h = 52.dp, cols = listOf(Color(0xFFFFB400), Color(0xFFFF5E8A)))
+            PBtn("🎲 Spin!", { vy = (if ((0..1).random() == 0) 1 else -1) * (7f + (0..5).random()); vt = ((-3..3).random()).toFloat() }, h = 52.dp)
         } else if (round < 5) {
             Big(if (msg.isNotEmpty()) msg else "Find the letter  🎯 ${letters[target].c}", 24)
             PBtn("✔ This one!", {
@@ -281,8 +283,7 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
 @Composable fun Hero3D(best: Int, onDash: () -> Unit, onCube: () -> Unit) {
     val pal = LocalPal.current
     val spin by rememberInfiniteTransition(label = "hero").animateFloat(0f, 6.2832f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "spin")
-    Row(Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(28.dp)).clip(RoundedCornerShape(28.dp))
-        .background(Brush.linearGradient(listOf(Color(0xFF1B1245), pal.a1))).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(Shape20).background(Brush.linearGradient(listOf(Panel, Panel2))).border(1.dp, Hair, Shape20).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Canvas(Modifier.size(128.dp)) {
             val cam = Cam(size.width, size.height, hor = size.height * .5f, camH = 0f, back = 0f, fl = size.minDimension * 1.45f)
             val q = drawMesh(cam, place(CUBE, .95f, .95f, .95f, 0f, spin, 0f, 0f, 0f, 4.2f, .5f), Color.White, edge = Color.White, tint = { cubeCols[it] })
@@ -291,17 +292,17 @@ private val cubeCols = listOf(Color(0xFFFF6FB5), Color(0xFF6C4DF4), Color(0xFF22
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f), Arrangement.spacedBy(6.dp)) {
-            Text("3D ZONE", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFE066))
-            Text("Race, spin & spell!", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            if (best > 0) Text("🏆 Dash best: $best", fontSize = 12.sp, color = Color.White.copy(alpha = .85f))
+            Text("3D ZONE", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = pal.a1, letterSpacing = 2.sp)
+            Text("Race, spin & spell", fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+            if (best > 0) Text("Dash best  $best", fontSize = 12.sp, color = Muted)
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-                MiniBtn("🚀 Dash", Modifier.weight(1f), listOf(Color(0xFFFFB400), Color(0xFFFF5E8A)), onDash)
-                MiniBtn("🧊 Cube", Modifier.weight(1f), listOf(Color(0xFF22C1A5), Color(0xFF3DB9FF)), onCube)
+                MiniBtn("🚀 Dash", Modifier.weight(1f), listOf(Dark), onDash)
+                MiniBtn("🧊 Cube", Modifier.weight(1f), emptyList(), onCube)
             }
         }
     }
 }
 
 @Composable fun MiniBtn(t: String, modifier: Modifier, cols: List<Color>, onClick: () -> Unit) =
-    Box(modifier.height(42.dp).background(Brush.horizontalGradient(cols), RoundedCornerShape(21.dp)).clickable(onClick = onClick), Alignment.Center) {
-        Text(t, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+    Box(modifier.height(42.dp).background(if (cols.size == 1) LocalPal.current.a1 else Panel2, RoundedCornerShape(14.dp)).border(1.dp, if (cols.size == 1) LocalPal.current.a1 else Hair, RoundedCornerShape(14.dp)).clickable(onClick = onClick), Alignment.Center) {
+        Text(t, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (cols.size == 1) Dark else Ink) }
