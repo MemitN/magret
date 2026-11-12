@@ -81,7 +81,7 @@ data class QuizResult(val correct: Int, val total: Int, val combo: Int)
     Box(Modifier.fillMaxSize()) {
         if (stars >= 2) Confetti(r)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), Arrangement.spacedBy(14.dp, Alignment.CenterVertically), Alignment.CenterHorizontally) {
-            Mascot(if (stars == 3) "🏆" else if (stars >= 1) "🎉" else "💪", 90)
+            CritterBounce(if (stars == 3) 4 else if (stars >= 1) 0 else 6, 130.dp)
             Big(if (stars == 3) "Perfect!" else if (stars >= 1) "Well done!" else "Keep going!", 34)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { (1..3).forEach { s -> Pop(s * 250) { Text(if (s <= stars) "⭐" else "☆", fontSize = 56.sp) } } }
             Big("${r.correct} of ${r.total} correct · best combo ${r.combo}", 16)

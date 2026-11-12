@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -53,30 +54,32 @@ import kotlin.random.Random
 // =====================================================================================
 data class Pal(val name: String, val emoji: String, val bg1: Color, val bg2: Color, val a1: Color, val a2: Color, val price: Int)
 val pals = listOf(
-    Pal("Aqua", "◐", Color(0xFF080C12), Color(0xFF0C141D), Color(0xFF5CE1E6), Color(0xFF2BB3C0), 0),
-    Pal("Lime", "◑", Color(0xFF0A0E0A), Color(0xFF111A10), Color(0xFFB6F36B), Color(0xFF7BC62D), 60),
-    Pal("Amber", "◒", Color(0xFF0E0B08), Color(0xFF191209), Color(0xFFFFC857), Color(0xFFE59E1A), 120),
-    Pal("Violet", "◓", Color(0xFF0B0911), Color(0xFF150F22), Color(0xFFB69CFF), Color(0xFF8566E8), 200))
+    Pal("Meadow", "🌿", Color(0xFF2DB87A), Color(0xFF117A4D), Color(0xFF1B9A62), Color(0xFF7ED9A8), 0),
+    Pal("Lagoon", "🌊", Color(0xFF2AA9C9), Color(0xFF127393), Color(0xFF1387AA), Color(0xFF7CD3EA), 60),
+    Pal("Berry", "🫐", Color(0xFF9B6BE8), Color(0xFF5A3BB0), Color(0xFF6F45CF), Color(0xFFC1A6F5), 120),
+    Pal("Sunset", "🌅", Color(0xFFFF8F6B), Color(0xFFD9503A), Color(0xFFE4573D), Color(0xFFFFC0A8), 200))
 val LocalPal = compositionLocalOf { pals[0] }
-val Ink = Color(0xFFE8EEF5)        // main text
-val Muted = Color(0xFF8A98A8)      // secondary text
-val Panel = Color(0xFF121A23)      // cards
-val Panel2 = Color(0xFF1A2430)     // raised / inactive controls
-val Hair = Color(0xFF2A3645)       // 1dp outlines
-val Dark = Color(0xFF061017)       // text on the accent colour
-val Ok = Color(0xFF4ADE9A)         // correct
-val Warn = Color(0xFFFF7A7A)       // wrong
-val Shape12 = RoundedCornerShape(12.dp); val Shape16 = RoundedCornerShape(16.dp); val Shape20 = RoundedCornerShape(20.dp)
+val Ink = Color(0xFF123A2C)        // main text
+val Muted = Color(0xFF66807A)      // secondary text
+val Panel = Color(0xFFF3F8F5)      // cards on the white sheet
+val Panel2 = Color(0xFFE4EFE9)     // inactive controls
+val Hair = Color(0xFFD2E2D8)       // 1dp outlines
+val Dark = Color(0xFFFFFFFF)       // text on the accent colour (name kept from the earlier versions)
+val Ok = Color(0xFF1FA971)         // correct
+val Warn = Color(0xFFE5484D)       // wrong
+val Shape28 = RoundedCornerShape(28.dp); val Shape12 = RoundedCornerShape(12.dp); val Shape16 = RoundedCornerShape(16.dp); val Shape20 = RoundedCornerShape(20.dp)
 
-// ---------- Backdrop: near-black, faint dot grid, one slow accent glow ----------
+// ---------- Backdrop: saturated theme colour with soft leaf shapes (the white sheet sits on top of this) ----------
 @Composable fun Backdrop(content: @Composable BoxScope.() -> Unit) {
     val pal = LocalPal.current
-    val t by rememberInfiniteTransition(label = "bg").animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "t")
+    val t by rememberInfiniteTransition(label = "bg").animateFloat(0f, 1f, infiniteRepeatable(tween(8000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "t")
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(pal.bg1, pal.bg2)))) {
         Canvas(Modifier.fillMaxSize()) {
-            drawCircle(Brush.radialGradient(listOf(pal.a1.copy(alpha = .10f + .05f * t), Color.Transparent), Offset(size.width * .5f, -size.height * .02f), size.width * 1.1f), size.width * 1.1f, Offset(size.width * .5f, -size.height * .02f))
-            val gap = 44.dp.toPx(); var y = gap / 2
-            while (y < size.height) { var x = gap / 2; while (x < size.width) { drawCircle(Color.White.copy(alpha = .045f), 1.3f, Offset(x, y)); x += gap }; y += gap }
+            val w = size.width; val h = size.height
+            fun leaf(cx: Float, cy: Float, lw: Float, lh: Float, deg: Float, a: Float) = rotateDraw(deg, Offset(cx, cy)) { drawOval(Color.White.copy(alpha = a), Offset(cx - lw / 2, cy - lh / 2), Size(lw, lh)) }
+            leaf(w * .05f, h * .05f, w * .7f, w * .26f, -32f + 4f * t, .10f); leaf(w * .98f, h * .10f, w * .55f, w * .20f, 38f - 4f * t, .09f)
+            leaf(w * .12f, h * .30f, w * .5f, w * .18f, 24f, .07f); leaf(w * .95f, h * .62f, w * .6f, w * .2f, -28f + 3f * t, .06f)
+            drawCircle(Color.White.copy(alpha = .08f), w * .30f, Offset(w * .86f, h * .02f)); drawCircle(Color.White.copy(alpha = .06f), w * .18f, Offset(w * .08f, h * .52f))
         }
         content()
     }
@@ -103,16 +106,57 @@ val Shape12 = RoundedCornerShape(12.dp); val Shape16 = RoundedCornerShape(16.dp)
 @Composable fun Chip(t: String) = Box(Modifier.background(Panel2, RoundedCornerShape(20.dp)).border(1.dp, Hair, RoundedCornerShape(20.dp))
     .padding(horizontal = 12.dp, vertical = 6.dp)) { Text(t, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ink) }
 
-/** Menu tile: dark panel, hairline outline, picture at the left, text underneath. `cols` is ignored (kept so old call sites compile). */
+/** Menu tile: a soft card with a cartoon character leaning in from the corner. `cols` is ignored (kept so old call sites compile). */
 @Composable fun Tile(emoji: String, title: String, sub: String, cols: List<Color>, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val src = remember { MutableInteractionSource() }; val down by src.collectIsPressedAsState()
     val sc by animateFloatAsState(if (down) .96f else 1f, spring(dampingRatio = .6f), label = "tile")
-    val pal = LocalPal.current
-    Column(modifier.scale(sc).height(108.dp).background(Panel, Shape20).border(1.dp, if (down) pal.a1 else Hair, Shape20)
-        .clickable(interactionSource = src, indication = null, onClick = onClick).padding(14.dp), Arrangement.SpaceBetween, Alignment.Start) {
-        Text(emoji, fontSize = 30.sp)
-        Column { Text(title, fontSize = 15.sp, color = Ink, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            if (sub.isNotEmpty()) Text(sub, fontSize = 11.sp, color = Muted, maxLines = 1) }
+    val pal = LocalPal.current; val fx = LocalSfx.current
+    val kind = (title.hashCode() and 0x7fffffff) % CRITTERS
+    Box(modifier.scale(sc).height(118.dp).clip(Shape20).background(if (kind % 2 == 0) pal.a2.copy(alpha = .22f) else Panel).border(1.dp, if (down) pal.a1 else Hair, Shape20)
+        .clickable(interactionSource = src, indication = null) { fx?.tap(); onClick() }) {
+        Critter(kind, 70.dp, Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = 16.dp))
+        Box(Modifier.padding(12.dp).size(34.dp).background(Color.White, CircleShape).border(1.dp, Hair, CircleShape), Alignment.Center) { Text(emoji, fontSize = 18.sp) }
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth(.70f).padding(start = 12.dp, bottom = 10.dp)) {
+            Text(title, fontSize = 14.sp, color = Ink, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 16.sp)
+            if (sub.isNotEmpty()) Text(sub, fontSize = 11.sp, color = Muted, maxLines = 1)
+        }
+    }
+}
+
+/** Big feature card: theme-colour gradient, white text, a character beside it. */
+@Composable fun HeroCard(title: String, sub: String, kind: Int, light: Boolean = false, onClick: () -> Unit) {
+    val pal = LocalPal.current; val fx = LocalSfx.current
+    val src = remember { MutableInteractionSource() }; val down by src.collectIsPressedAsState()
+    val sc by animateFloatAsState(if (down) .97f else 1f, spring(dampingRatio = .6f), label = "hero")
+    val shape = RoundedCornerShape(24.dp)
+    Box(Modifier.fillMaxWidth().height(104.dp).scale(sc).clip(shape)
+        .background(if (light) Brush.horizontalGradient(listOf(Panel, Panel)) else Brush.linearGradient(listOf(pal.bg1, pal.a1)), shape)
+        .then(if (light) Modifier.border(1.dp, Hair, shape) else Modifier)
+        .clickable(interactionSource = src, indication = null) { fx?.tap(); onClick() }) {
+        Column(Modifier.align(Alignment.CenterStart).fillMaxWidth(.66f).padding(start = 18.dp)) {
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (light) Ink else Color.White)
+            Text(sub, fontSize = 12.sp, color = if (light) Muted else Color.White.copy(alpha = .85f), maxLines = 2)
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.background(if (light) pal.a1 else Color.White, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 5.dp)) {
+                Text("Play  ▶", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (light) Color.White else pal.a1) }
+        }
+        CritterBounce(kind, 92.dp, Modifier.align(Alignment.BottomEnd).padding(end = 10.dp))
+    }
+}
+
+/** Green strip above the white sheet: who is playing, their coins and streak, and a character standing on the sheet. */
+@Composable fun AppHeader(k: Profile, screen: String) {
+    val title = when (screen) { "home" -> "Hi, ${k.name}!"; "map" -> "Adventure map"; "awards" -> "Badges"; "shop" -> "Shop"; else -> "Parent zone" }
+    val sub = if (screen == "home") "Level ${k.level} · ${rankName(k.level)}" else "${k.av} ${k.name} · level ${k.level}"
+    val kind = when (screen) { "home" -> 0; "map" -> 1; "awards" -> 4; "shop" -> 2; else -> 3 }
+    Row(Modifier.fillMaxWidth().height(112.dp).padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+            Text(sub, fontSize = 13.sp, color = Color.White.copy(alpha = .88f), maxLines = 1)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { Chip("🪙 ${k.coins}"); Chip("🔥 ${k.streak}"); Chip("⭐ ${k.stars}") }
+        }
+        CritterBounce(kind, 100.dp, Modifier.align(Alignment.Bottom))
     }
 }
 
@@ -155,7 +199,7 @@ val Shape12 = RoundedCornerShape(12.dp); val Shape16 = RoundedCornerShape(16.dp)
     val prog = remember(key) { Animatable(0f) }
     val parts = remember(key) { List(46) { floatArrayOf(Random.nextFloat(), Random.nextFloat() * .3f, (Random.nextFloat() - .5f) * .25f, .5f + Random.nextFloat() * .8f, Random.nextFloat() * 6f, Random.nextInt(3).toFloat()) } }
     LaunchedEffect(key) { prog.animateTo(1f, tween(2400, easing = LinearEasing)) }
-    val cols = listOf(pal.a1, Color.White, pal.a2)
+    val cols = listOf(pal.a1, pal.a2, Color(0xFFFFC857))
     Canvas(Modifier.fillMaxSize()) {
         val t = prog.value
         if (t < 1f) parts.forEach { q ->
@@ -177,37 +221,24 @@ val Shape12 = RoundedCornerShape(12.dp); val Shape16 = RoundedCornerShape(16.dp)
 }
 val tabs = listOf(Triple("home", "", "Home"), Triple("map", "", "Map"), Triple("awards", "", "Badges"), Triple("shop", "", "Shop"), Triple("parent", "", "Parents"))
 
-/** Thin line icons, drawn so they take the accent / muted colour (emoji can't be recoloured). */
-@Composable fun NavIcon(id: String, c: Color, size: Dp = 24.dp) = Canvas(Modifier.size(size)) {
-    val w = this.size.width; val s = Stroke(2.2f * (w / 48f) * 2f, cap = StrokeCap.Round, join = StrokeJoin.Round); val p = Path()
-    when (id) {
-        "home" -> { p.moveTo(w * .12f, w * .48f); p.lineTo(w * .5f, w * .14f); p.lineTo(w * .88f, w * .48f); p.moveTo(w * .22f, w * .42f); p.lineTo(w * .22f, w * .86f); p.lineTo(w * .78f, w * .86f); p.lineTo(w * .78f, w * .42f) }
-        "map" -> { p.moveTo(w * .12f, w * .22f); p.lineTo(w * .38f, w * .14f); p.lineTo(w * .62f, w * .22f); p.lineTo(w * .88f, w * .14f); p.lineTo(w * .88f, w * .78f); p.lineTo(w * .62f, w * .86f); p.lineTo(w * .38f, w * .78f); p.lineTo(w * .12f, w * .86f); p.close()
-            p.moveTo(w * .38f, w * .14f); p.lineTo(w * .38f, w * .78f); p.moveTo(w * .62f, w * .22f); p.lineTo(w * .62f, w * .86f) }
-        "awards" -> { for (i in 0 until 5) { val a = Math.toRadians(-90.0 + i * 72); val b = Math.toRadians(-90.0 + i * 72 + 36)
-            val x1 = w * .5f + w * .38f * Math.cos(a).toFloat(); val y1 = w * .52f + w * .38f * Math.sin(a).toFloat(); val x2 = w * .5f + w * .16f * Math.cos(b).toFloat(); val y2 = w * .52f + w * .16f * Math.sin(b).toFloat()
-            if (i == 0) p.moveTo(x1, y1) else p.lineTo(x1, y1); p.lineTo(x2, y2) }; p.close() }
-        "shop" -> { p.moveTo(w * .5f, w * .1f); p.lineTo(w * .86f, w * .42f); p.lineTo(w * .5f, w * .9f); p.lineTo(w * .14f, w * .42f); p.close(); p.moveTo(w * .14f, w * .42f); p.lineTo(w * .86f, w * .42f); p.moveTo(w * .36f, w * .42f); p.lineTo(w * .5f, w * .9f); p.moveTo(w * .64f, w * .42f); p.lineTo(w * .5f, w * .9f) }
-        else -> { p.moveTo(w * .5f, w * .1f); p.lineTo(w * .84f, w * .22f); p.lineTo(w * .84f, w * .5f); p.cubicTo(w * .84f, w * .72f, w * .66f, w * .84f, w * .5f, w * .92f); p.cubicTo(w * .34f, w * .84f, w * .16f, w * .72f, w * .16f, w * .5f); p.lineTo(w * .16f, w * .22f); p.close() }
-    }
-    drawPath(p, c, style = s)
-}
+val navCritter = mapOf("home" to 0, "map" to 1, "awards" to 4, "shop" to 2, "parent" to 3)
 @Composable fun BottomNav(cur: String, go: (String) -> Unit) {
     val pal = LocalPal.current; val fx = LocalSfx.current
-    Row(Modifier.fillMaxWidth().background(Panel, Shape20).border(1.dp, Hair, Shape20).padding(horizontal = 4.dp, vertical = 8.dp), Arrangement.SpaceEvenly) {
+    Row(Modifier.fillMaxWidth().clip(Shape28).background(Color.White, Shape28).padding(horizontal = 6.dp, vertical = 6.dp), Arrangement.SpaceEvenly) {
         tabs.forEach { (id, _, n) ->
             val on = id == cur
-            val c by animateColorAsState(if (on) pal.a1 else Muted, tween(200), label = "navc")
-            Column(Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { if (!on) { fx?.tap(); go(id) } }, horizontalAlignment = Alignment.CenterHorizontally) {
-                NavIcon(id, c); Spacer(Modifier.height(3.dp))
-                Text(n, fontSize = 10.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, color = c, letterSpacing = .6.sp)
-                Spacer(Modifier.height(3.dp)); Box(Modifier.size(width = if (on) 14.dp else 0.dp, height = 2.dp).background(pal.a1, CircleShape))
+            val bg by animateColorAsState(if (on) pal.a1.copy(alpha = .14f) else Color.Transparent, tween(200), label = "navbg")
+            val sc by animateFloatAsState(if (on) 1.08f else .92f, spring(dampingRatio = .55f), label = "navs")
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(bg).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { if (!on) { fx?.tap(); go(id) } }.padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Critter(navCritter[id] ?: 0, 38.dp, Modifier.scale(sc).alpha(if (on) 1f else .75f))
+                Text(n, fontSize = 10.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) pal.a1 else Muted, letterSpacing = .4.sp)
             }
         }
     }
 }
 @Composable fun BadgePopup(list: List<Badge>, close: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color(0xDD04080C)).clickable(onClick = close), Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0x99101820)).clickable(onClick = close), Alignment.Center) {
         Confetti(list)
         Pop { GCard(Modifier.padding(28.dp).fillMaxWidth()) {
             Text("NEW BADGE${if (list.size > 1) "S" else ""}", fontSize = 12.sp, color = LocalPal.current.a1, letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))

@@ -281,23 +281,23 @@ private val cubeCols = listOf(Color(0xFF26384B), Color(0xFF1E2F41), Color(0xFF2E
 //  3D ZONE hero card for the Home screen: a slowly spinning cube + two big buttons
 // ---------------------------------------------------------------------------------
 @Composable fun Hero3D(best: Int, onDash: () -> Unit, onCube: () -> Unit) {
-    val pal = LocalPal.current
+    val pal = LocalPal.current; val fx = LocalSfx.current
     val spin by rememberInfiniteTransition(label = "hero").animateFloat(0f, 6.2832f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "spin")
-    Row(Modifier.fillMaxWidth().clip(Shape20).background(Brush.linearGradient(listOf(Panel, Panel2))).border(1.dp, Hair, Shape20).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Canvas(Modifier.size(128.dp)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(pal.a1, pal.bg2))).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(118.dp)) {
             val cam = Cam(size.width, size.height, hor = size.height * .5f, camH = 0f, back = 0f, fl = size.minDimension * 1.45f)
             val q = drawMesh(cam, place(CUBE, .95f, .95f, .95f, 0f, spin, 0f, 0f, 0f, 4.2f, .5f), Color.White, edge = Color.White, tint = { cubeCols[it] })
             val ls = "ABCDEF"
             for (i in 0 until 6) onFace(q[i]) { c -> faceText(c, ls[i].toString(), 50f, 52f, 70f) }
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f), Arrangement.spacedBy(6.dp)) {
-            Text("3D ZONE", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = pal.a1, letterSpacing = 2.sp)
-            Text("Race, spin & spell", fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-            if (best > 0) Text("Dash best  $best", fontSize = 12.sp, color = Muted)
+            Text("3D ZONE", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = .8f), letterSpacing = 2.sp)
+            Text("Race, spin & spell", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            if (best > 0) Text("Dash best  $best", fontSize = 12.sp, color = Color.White.copy(alpha = .85f))
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-                MiniBtn("🚀 Dash", Modifier.weight(1f), listOf(Dark), onDash)
-                MiniBtn("🧊 Cube", Modifier.weight(1f), emptyList(), onCube)
+                Box(Modifier.weight(1f).height(40.dp).background(Color.White, RoundedCornerShape(14.dp)).clickable { fx?.tap(); onDash() }, Alignment.Center) { Text("🚀 Dash", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = pal.a1) }
+                Box(Modifier.weight(1f).height(40.dp).background(Color.White.copy(alpha = .22f), RoundedCornerShape(14.dp)).clickable { fx?.tap(); onCube() }, Alignment.Center) { Text("🧊 Cube", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
             }
         }
     }

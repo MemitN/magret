@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId = "com.margaretm.app"
         minSdk = 24; targetSdk = 34
-        versionCode = 4; versionName = "2.1"
+        versionCode = 6; versionName = "2.3"
     }
     buildFeatures { compose = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

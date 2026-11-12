@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
     val signup = !st.hasAccount()
     var email by remember { mutableStateOf("") }; var pin by remember { mutableStateOf("") }; var err by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), Arrangement.spacedBy(14.dp, Alignment.CenterVertically)) {
-        Box(Modifier.fillMaxWidth(), Alignment.Center) { Mascot("👩‍🏫", 80) }; Big("Margaret M", 38); Big(if (signup) "Create parent account" else "Parent login", 18)
+        Box(Modifier.fillMaxWidth(), Alignment.Center) { CritterBounce(0, 110.dp) }; Big("Margaret M", 38); Big(if (signup) "Create parent account" else "Parent login", 18)
         OutlinedTextField(email, { email = it.trim() }, Modifier.fillMaxWidth(), label = { Text("Parent email") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
         OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(), label = { Text("4-digit PIN") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
@@ -101,16 +101,12 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
     @Composable fun grid(l: List<Tl>, off: Int) = l.chunked(2).forEachIndexed { r, row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
         row.forEachIndexed { c, g -> Tile(g.e, g.t, g.s, emptyList(), Modifier.weight(1f)) { go(g.route) } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } }
     Scroll {
-        // header: who + currency
+        // progress + primary actions
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(k.av, fontSize = 34.sp); Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) { Text("Hi, ${k.name}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ink); Text("LEVEL ${k.level} · ${rankName(k.level).uppercase()}", fontSize = 11.sp, color = Muted, letterSpacing = 1.4.sp) }
-            Chip("🪙 ${k.coins}"); Spacer(Modifier.width(6.dp)); Chip("🔥 ${k.streak}")
-        }
-        Bar(levelProgress(k.xp), Modifier.padding(top = 2.dp))
-        // primary actions
-        if (next != null) PBtn("Continue · ${next.world.substringBefore(' ')} level ${next.n}", { go("level:${next.n}") }, h = 60.dp)
-        PBtn(if (dailyDone) "Daily challenge ✔  play again" else "Daily challenge  +bonus", { go("daily") }, h = 52.dp, ghost = true)
+            Text("LEVEL ${k.level}", fontSize = 11.sp, color = Muted, letterSpacing = 1.6.sp, fontWeight = FontWeight.SemiBold); Spacer(Modifier.weight(1f)); Text("${k.xp} XP", fontSize = 11.sp, color = Muted) }
+        Bar(levelProgress(k.xp), Modifier.padding(bottom = 2.dp))
+        if (next != null) HeroCard("Continue", "${next.world.substringBefore(' ')} · level ${next.n}", 0) { go("level:${next.n}") }
+        HeroCard(if (dailyDone) "Daily challenge ✔" else "Daily challenge", if (dailyDone) "Done today · play again for fun" else "Bonus stars and coins today", 6, light = true) { go("daily") }
         // today: goal | gift | word
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), Arrangement.spacedBy(10.dp)) {
             GCard(Modifier.weight(1.25f).fillMaxHeight()) { Text("TODAY", fontSize = 11.sp, color = Muted, letterSpacing = 1.6.sp); Spacer(Modifier.height(4.dp))
@@ -138,7 +134,6 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
     val cur = adventure.firstOrNull { (k.levels[it.n] ?: 0) == 0 }?.n
     Scroll {
         val done = k.levels.count { it.value >= 1 }
-        Text("Adventure map", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink)
         Text("$done / ${adventure.size} levels · ${k.levels.values.sum()} ★", fontSize = 13.sp, color = Muted)
         Bar(done.toFloat() / adventure.size)
         val pal = LocalPal.current
@@ -169,7 +164,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
 @Composable fun AwardsScreen(k: Profile) {
     var sel by remember { mutableStateOf<Badge?>(null) }
     Scroll {
-        Text("Badges", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink); Text("${k.badges.size} of ${badges.size} collected", fontSize = 13.sp, color = Muted); Bar(k.badges.size.toFloat() / badges.size)
+        Text("${k.badges.size} of ${badges.size} collected", fontSize = 13.sp, color = Muted); Bar(k.badges.size.toFloat() / badges.size)
         sel?.let { b -> GCard(Modifier.fillMaxWidth()) { Text("${b.emoji} ${b.name}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Ink); Text(b.desc + if (b.id in k.badges) " ✔" else "", color = Ink) } }
         badges.chunked(4).forEach { row -> Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
             row.forEach { b -> val got = b.id in k.badges
@@ -183,8 +178,7 @@ data class Tl(val e: String, val t: String, val s: String, val route: String)
 @Composable fun ShopScreen(k: Profile, v: Voice, buy: (Int) -> Boolean, equipAv: (String) -> Unit, buyAv: (String, Int) -> Boolean, setTheme: (Int) -> Unit) {
     var msg by remember { mutableStateOf("") }
     Scroll {
-        Text("Shop", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-        Chip("🪙 ${k.coins} coins"); if (msg.isNotEmpty()) Text(msg, color = Ink, fontWeight = FontWeight.Bold)
+        if (msg.isNotEmpty()) Text(msg, color = Ink, fontWeight = FontWeight.Bold)
         Section("Themes")
         pals.forEachIndexed { i, p -> val own = i in k.ownedTheme
             GCard(Modifier.fillMaxWidth(), { if (own) { setTheme(i); msg = "${p.name} theme on!" } else msg = if (buy(i)) "Unlocked ${p.name}! 🎉" else "Need ${p.price - k.coins} more coins" }) {

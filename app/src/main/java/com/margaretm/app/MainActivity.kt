@@ -12,8 +12,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -98,12 +100,14 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
     }
 
     BackHandler(enabled = screen != "home" && screen != "auth" && screen != "login" && screen != "profiles") { go(if (me != null) "home" else "profiles") }
-    MaterialTheme(colorScheme = darkColorScheme(primary = pal.a1, onPrimary = Dark, secondary = pal.a2, onSecondary = Dark, background = pal.bg1, onBackground = Ink,
+    MaterialTheme(colorScheme = lightColorScheme(primary = pal.a1, onPrimary = Dark, secondary = pal.a2, onSecondary = Dark, background = Color.White, onBackground = Ink,
         surface = Panel, onSurface = Ink, surfaceVariant = Panel2, onSurfaceVariant = Muted, outline = Hair, error = Warn)) {
     CompositionLocalProvider(LocalPal provides pal, LocalSfx provides fx, LocalContentColor provides Ink) {
         Backdrop {
-            Column(Modifier.fillMaxSize().padding(16.dp)) {
-                Box(Modifier.weight(1f)) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)) {
+                val onMain = screen in mainTabs && me != null
+                if (onMain) AppHeader(me!!, screen) else Spacer(Modifier.height(6.dp))
+                Box(Modifier.weight(1f).fillMaxWidth().clip(Shape28).background(Color.White).padding(16.dp)) {
                     AnimatedContent(screen, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(150)) }, label = "screens") { s ->
                         when (s) {
                             "auth", "login" -> Auth(st) { tick++; go("profiles") }
@@ -144,7 +148,7 @@ private val mainTabs = setOf("home", "map", "awards", "shop", "parent")
                         }
                     }
                 }
-                if (screen in mainTabs && me != null) { Spacer(Modifier.height(8.dp)); BottomNav(screen) { go(it) } }
+                if (onMain) { Spacer(Modifier.height(10.dp)); BottomNav(screen) { go(it) } }
             }
             if (fresh.isNotEmpty()) BadgePopup(fresh) { fresh = emptyList() }
         }
